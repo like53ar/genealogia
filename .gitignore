@@ -1,0 +1,41 @@
+# ── Python ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# DB local
+*.db
+*.sqlite
+*.sqlite3
+
+# dotenv
+.env
+.env.*
+
+# ── Node / Angular ───────────────────────────────────────
+node_modules/
+dist/
+.angular/
+
+# ── IDE ──────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ── OS ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
