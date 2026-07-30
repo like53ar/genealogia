@@ -12,6 +12,11 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
   template: `
     <div class="tree-viewport">
 
+      <!-- Toast de éxito -->
+      <div class="success-toast" *ngIf="toastVisible">
+        {{ toastMessage }}
+      </div>
+
       <!-- Loading -->
       <div *ngIf="loading" class="loading-msg">
         Cargando tu historia...
@@ -26,6 +31,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
             <app-person-node
               [person]="gp"
               [role]="'ancestor'"
+              [kinshipLabel]="kinshipLabels.get(gp.id) || ''"
               (nodeClick)="onPersonNodeClick(gp)"
               (addAction)="openAddRelative(gp, $event.type)"
             ></app-person-node>
@@ -45,6 +51,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
             <app-person-node
               [person]="parents[0]"
               [role]="'parent'"
+              [kinshipLabel]="kinshipLabels.get(parents[0].id) || ''"
               (nodeClick)="onPersonNodeClick(parents[0])"
               (addAction)="openAddRelative(parents[0], $event.type)"
             ></app-person-node>
@@ -58,6 +65,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
             <app-person-node
               [person]="parents[1]"
               [role]="'parent'"
+              [kinshipLabel]="kinshipLabels.get(parents[1].id) || ''"
               (nodeClick)="onPersonNodeClick(parents[1])"
               (addAction)="openAddRelative(parents[1], $event.type)"
             ></app-person-node>
@@ -77,14 +85,22 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
             <app-person-node
               [person]="rootPerson"
               [role]="'root'"
+              [kinshipLabel]="''"
               (nodeClick)="onPersonNodeClick(rootPerson)"
               (addAction)="openAddRelative(rootPerson, $event.type)"
             ></app-person-node>
           </div>
 
-          <!-- H-connector root → partner -->
+          <!-- H-connector root → partner (with wedding year) -->
           <div class="couple-connector-wrap" *ngIf="partners.length > 0">
-            <div class="h-connector couple-h-line"></div>
+            <div class="couple-connector-inner">
+              <!-- Wedding year badge -->
+              <div class="wedding-badge" *ngIf="getWeddingYear()">
+                <span class="wedding-icon">&#x1F48D;</span>
+                <span class="wedding-year">{{ getWeddingYear() }}</span>
+              </div>
+              <div class="h-connector couple-h-line"></div>
+            </div>
           </div>
 
           <!-- Partner(s) -->
@@ -94,6 +110,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
               <app-person-node
                 [person]="partner"
                 [role]="'partner'"
+                [kinshipLabel]="kinshipLabels.get(partner.id) || ''"
                 (nodeClick)="onPersonNodeClick(partner)"
                 (addAction)="openAddRelative(partner, $event.type)"
               ></app-person-node>
@@ -102,24 +119,12 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
 
         </div>
 
-        <!-- Add partner button (if no partner yet) -->
-        <div class="add-partner-row" *ngIf="partners.length === 0">
-          <button (click)="openAddRelative(rootPerson!, 'PAREJA')" class="add-relative-btn add-partner-btn">
-            <span class="plus-icon">+</span> Añadir Pareja
-          </button>
-        </div>
 
         <!-- Connector: couple center → children -->
         <div class="connector-to-children" *ngIf="children.length > 0">
           <div class="v-line-center"></div>
         </div>
 
-        <!-- Add child button (centered below couple) -->
-        <div class="add-child-center" *ngIf="partners.length > 0">
-          <button (click)="openAddRelative(rootPerson!, 'HIJO')" class="add-relative-btn add-child-btn">
-            <span class="plus-icon">+</span> Añadir Hijo/a
-          </button>
-        </div>
 
         <!-- ── CHILDREN ROW ────────────────────────────────── -->
         <div class="tree-row children-row" *ngIf="children.length > 0">
@@ -132,6 +137,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
             <app-person-node
               [person]="child"
               [role]="'child'"
+              [kinshipLabel]="kinshipLabels.get(child.id) || ''"
               (nodeClick)="onPersonNodeClick(child)"
               (addAction)="openAddRelative(child, $event.type)"
             ></app-person-node>
@@ -181,6 +187,30 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
       color: #94A3B8;
       font-size: 14px;
       animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    /* Toast de éxito */
+    .success-toast {
+      position: fixed;
+      top: 80px;
+      right: 24px;
+      z-index: 100;
+      background: #4A7A50;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      animation: toastFade 2.5s ease forwards;
+      pointer-events: none;
+    }
+
+    @keyframes toastFade {
+      0%   { opacity: 0; transform: translateY(-8px); }
+      15%  { opacity: 1; transform: translateY(0); }
+      75%  { opacity: 1; }
+      100% { opacity: 0; }
     }
 
     /* ── Main layout (vertical column) ─────────────────── */
@@ -256,9 +286,42 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
       width: 80px;
     }
 
+
+    /* Couple connector wraps badge + line */
     .couple-connector-wrap {
       display: flex;
       align-items: center;
+    }
+
+    .couple-connector-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    /* Wedding year badge above the line */
+    .wedding-badge {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      background: #FDF6EC;
+      border: 1px solid #E8D0A8;
+      border-radius: 10px;
+      padding: 2px 7px;
+      margin-bottom: 4px;
+      white-space: nowrap;
+    }
+
+    .wedding-icon {
+      font-size: 11px;
+    }
+
+    .wedding-year {
+      font-size: 11px;
+      color: #8B6A3E;
+      font-weight: 600;
+      letter-spacing: 0.03em;
     }
 
     .couple-h-line {
@@ -375,8 +438,14 @@ export class TreeContainerComponent implements OnInit {
   parents: Persona[] = [];
   partners: Persona[] = [];
   children: Persona[] = [];
+  partnerRelation: Relacion | null = null;
+  kinshipLabels = new Map<string, string>();
 
   loading = true;
+
+  // Toast de éxito
+  toastMessage = '';
+  toastVisible = false;
 
   // Dialog State
   isDialogOpen = false;
@@ -439,11 +508,69 @@ export class TreeContainerComponent implements OnInit {
       .map(r => r.persona_2_id);
     this.children = this.allPersons.filter(p => childIds.includes(p.id));
 
-    // Partners
-    const partnerIds = this.allRelations
-      .filter(r => r.tipo_relacion === 'PAREJA' && (r.persona_1_id === center.id || r.persona_2_id === center.id))
-      .map(r => r.persona_1_id === center.id ? r.persona_2_id : r.persona_1_id);
+    // Partners — keep the first relation for wedding date display
+    const partnerRelations = this.allRelations.filter(
+      r => r.tipo_relacion === 'PAREJA' &&
+        (r.persona_1_id === center.id || r.persona_2_id === center.id)
+    );
+    this.partnerRelation = partnerRelations[0] ?? null;
+
+    const partnerIds = partnerRelations.map(
+      r => r.persona_1_id === center.id ? r.persona_2_id : r.persona_1_id
+    );
     this.partners = this.allPersons.filter(p => partnerIds.includes(p.id));
+
+    // Compute kinship labels for all visible nodes
+    this.computeKinship();
+  }
+
+  /** Asigna automáticamente el grado de parentesco relativo a la raíz */
+  computeKinship() {
+    this.kinshipLabels.clear();
+
+    const g = (p: Persona, f: string, m: string, n: string) =>
+      p.genero === 'M' ? m : p.genero === 'F' ? f : n;
+
+    // Parejas
+    this.partners.forEach(p =>
+      this.kinshipLabels.set(p.id, g(p, 'Esposa', 'Esposo', 'Pareja'))
+    );
+
+    // Padres / Madres
+    this.parents.forEach(p =>
+      this.kinshipLabels.set(p.id, g(p, 'Madre', 'Padre', 'Padre/Madre'))
+    );
+
+    // Abuelos / Abuelas
+    this.grandparents.forEach(gp => {
+      // Determinar si es abuelo paterno o materno
+      const esPorPadre = this.parents.some(parent =>
+        this.allRelations.some(
+          r => r.tipo_relacion === 'PADRE_HIJO' &&
+               r.persona_1_id === gp.id &&
+               r.persona_2_id === parent.id
+        )
+      );
+      const lado = esPorPadre ? ' paterno' : ' materno';
+      this.kinshipLabels.set(gp.id, g(gp, 'Abuela' + lado, 'Abuelo' + lado, 'Abuelo/a' + lado));
+    });
+
+    // Hijos / Hijas
+    this.children.forEach(p =>
+      this.kinshipLabels.set(p.id, g(p, 'Hija', 'Hijo', 'Hijo/a'))
+    );
+  }
+  getWeddingYear(): string | null {
+    if (!this.partnerRelation?.fecha_inicio) return null;
+    try {
+      return new Date(this.partnerRelation.fecha_inicio + 'T00:00:00').getFullYear().toString();
+    } catch { return null; }
+  }
+
+  showToast(msg: string) {
+    this.toastMessage = msg;
+    this.toastVisible = true;
+    setTimeout(() => this.toastVisible = false, 2500);
   }
 
   onPersonNodeClick(person: Persona) {
@@ -457,8 +584,11 @@ export class TreeContainerComponent implements OnInit {
     this.isDialogOpen = true;
   }
 
-  onRelativeSaved(event: {personaData: PersonaCreate, relativeType: 'PADRE' | 'PAREJA' | 'HIJO'}) {
+  onRelativeSaved(event: {personaData: PersonaCreate, relativeType: 'PADRE' | 'PAREJA' | 'HIJO', fechaMatrimonio?: string}) {
     if (!this.dialogTargetPerson) return;
+
+    // Capture target now (before async)
+    const targetPerson = this.dialogTargetPerson;
 
     const payload = { ...event.personaData };
     if (!payload.fecha_nacimiento) delete payload.fecha_nacimiento;
@@ -473,17 +603,26 @@ export class TreeContainerComponent implements OnInit {
 
       if (event.relativeType === 'PADRE') {
         relationPayload.persona_1_id = newPerson.id;
-        relationPayload.persona_2_id = this.dialogTargetPerson!.id;
+        relationPayload.persona_2_id = targetPerson.id;
       } else if (event.relativeType === 'HIJO') {
-        relationPayload.persona_1_id = this.dialogTargetPerson!.id;
+        relationPayload.persona_1_id = targetPerson.id;
         relationPayload.persona_2_id = newPerson.id;
       } else if (event.relativeType === 'PAREJA') {
-        relationPayload.persona_1_id = this.dialogTargetPerson!.id;
+        relationPayload.persona_1_id = targetPerson.id;
         relationPayload.persona_2_id = newPerson.id;
+        if (event.fechaMatrimonio) {
+          relationPayload.fecha_inicio = event.fechaMatrimonio;
+        }
       }
 
       this.api.createRelacion(relationPayload).subscribe(() => {
         this.isDialogOpen = false;
+        this.showToast(event.relativeType === 'PAREJA'
+          ? '✓ Pareja agregada'
+          : event.relativeType === 'HIJO'
+            ? '✓ Hijo/a agregado'
+            : '✓ Padre/Madre agregado'
+        );
         this.loadData();
       });
     });

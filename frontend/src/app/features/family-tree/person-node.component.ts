@@ -33,28 +33,74 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
         <div class="person-years">
           {{ getBirthYear() }} {{ getDeathYear() ? '- ' + getDeathYear() : (getBirthYear() ? '- Presente' : '') }}
         </div>
+
+        <!-- Kinship badge -->
+        <div class="kinship-badge" *ngIf="kinshipLabel" [class]="getKinshipClass()">
+          {{ kinshipLabel }}
+        </div>
       </div>
 
-      <!-- Action buttons below card -->
+      <!-- Action buttons below card — contextual by role -->
       <div class="action-buttons">
-        <button
-          (click)="addAction.emit({person: person, type: 'PADRE', subType: 'PADRE'}); $event.stopPropagation()"
-          class="action-btn"
-          title="Añadir Padre">
-          + Padre
-        </button>
-        <button
-          (click)="addAction.emit({person: person, type: 'PADRE', subType: 'MADRE'}); $event.stopPropagation()"
-          class="action-btn"
-          title="Añadir Madre">
-          + Madre
-        </button>
-        <button
-          (click)="addAction.emit({person: person, type: 'HIJO', subType: 'HIJO'}); $event.stopPropagation()"
-          class="action-btn"
-          title="Añadir Hijo/a">
-          + Hijo/a
-        </button>
+
+        <!-- ROOT: Pareja + Hijo/a -->
+        <ng-container *ngIf="role === 'root'">
+          <button
+            (click)="addAction.emit({person: person, type: 'PAREJA', subType: 'PAREJA'}); $event.stopPropagation()"
+            class="action-btn action-btn-pareja"
+            title="Añadir Pareja">
+            💑 Pareja
+          </button>
+          <button
+            (click)="addAction.emit({person: person, type: 'HIJO', subType: 'HIJO'}); $event.stopPropagation()"
+            class="action-btn action-btn-hijo"
+            title="Añadir Hijo/a">
+            + Hijo/a
+          </button>
+        </ng-container>
+
+        <!-- PARTNER: Hijo/a (comparte hijos con root) -->
+        <ng-container *ngIf="role === 'partner'">
+          <button
+            (click)="addAction.emit({person: person, type: 'HIJO', subType: 'HIJO'}); $event.stopPropagation()"
+            class="action-btn action-btn-hijo"
+            title="Añadir Hijo/a">
+            + Hijo/a
+          </button>
+        </ng-container>
+
+        <!-- PARENT / ANCESTOR: solo Padres de ese antepasado -->
+        <ng-container *ngIf="role === 'parent' || role === 'ancestor'">
+          <button
+            (click)="addAction.emit({person: person, type: 'PADRE', subType: 'PADRE'}); $event.stopPropagation()"
+            class="action-btn"
+            title="Añadir Padre o Madre">
+            + Padres
+          </button>
+          <button
+            (click)="addAction.emit({person: person, type: 'PAREJA', subType: 'PAREJA'}); $event.stopPropagation()"
+            class="action-btn action-btn-pareja"
+            title="Añadir Pareja">
+            💑 Pareja
+          </button>
+        </ng-container>
+
+        <!-- CHILD: Pareja + Hijo/a (puede navegar a su propio árbol) -->
+        <ng-container *ngIf="role === 'child'">
+          <button
+            (click)="addAction.emit({person: person, type: 'PAREJA', subType: 'PAREJA'}); $event.stopPropagation()"
+            class="action-btn action-btn-pareja"
+            title="Añadir Pareja">
+            💑 Pareja
+          </button>
+          <button
+            (click)="addAction.emit({person: person, type: 'HIJO', subType: 'HIJO'}); $event.stopPropagation()"
+            class="action-btn action-btn-hijo"
+            title="Añadir Hijo/a">
+            + Hijo/a
+          </button>
+        </ng-container>
+
       </div>
 
     </div>
@@ -152,11 +198,49 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
       letter-spacing: 0.02em;
     }
 
+    /* Kinship badge */
+    .kinship-badge {
+      margin-top: 6px;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+
+    .kinship-ancestor {
+      background: #E8F0FF;
+      color: #3A5FA0;
+      border: 1px solid #BDD0FF;
+    }
+
+    .kinship-parent {
+      background: #E8F5E9;
+      color: #2E6E35;
+      border: 1px solid #A8D5AD;
+    }
+
+    .kinship-partner {
+      background: #FFF3E0;
+      color: #8B5E1A;
+      border: 1px solid #F5D08A;
+    }
+
+    .kinship-child {
+      background: #F3E5F5;
+      color: #6A2E80;
+      border: 1px solid #CFA8E0;
+    }
+
     /* Action buttons */
     .action-buttons {
       display: flex;
       gap: 4px;
       margin-top: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
     }
 
     .action-btn {
@@ -178,7 +262,27 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
       color: #4A7A50;
     }
 
-    /* Role-specific card colors: applied via [class] binding */
+    .action-btn-pareja {
+      border-color: #C9B99A;
+      color: #7A6040;
+    }
+    .action-btn-pareja:hover {
+      background: #FDF6EC;
+      border-color: #C9A87A;
+      color: #7A4F20;
+    }
+
+    .action-btn-hijo {
+      border-color: #A8C4A2;
+      color: #3D6B40;
+    }
+    .action-btn-hijo:hover {
+      background: #F0F7F0;
+      border-color: #6FA472;
+      color: #2D5230;
+    }
+
+    /* Role-specific card colors */
     .card-ancestor {
       background: #F5EDD8;
       border-color: #C9B99A;
@@ -231,6 +335,7 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
 export class PersonNodeComponent {
   @Input() person!: Persona;
   @Input() role: NodeRole = 'ancestor';
+  @Input() kinshipLabel = '';
 
   @Output() nodeClick = new EventEmitter<Persona>();
   @Output() addAction = new EventEmitter<{person: Persona, type: 'PADRE' | 'PAREJA' | 'HIJO', subType: string}>();
@@ -241,6 +346,14 @@ export class PersonNodeComponent {
 
   getAvatarClass(): string {
     return `avatar-circle avatar-${this.role}`;
+  }
+
+  getKinshipClass(): string {
+    if (this.role === 'partner') return 'kinship-badge kinship-partner';
+    if (this.role === 'parent') return 'kinship-badge kinship-parent';
+    if (this.role === 'ancestor') return 'kinship-badge kinship-ancestor';
+    if (this.role === 'child') return 'kinship-badge kinship-child';
+    return 'kinship-badge';
   }
 
   getInitials(nombre: string, apellido: string): string {
@@ -257,3 +370,4 @@ export class PersonNodeComponent {
     return new Date(this.person.fecha_fallecimiento).getFullYear().toString();
   }
 }
+
