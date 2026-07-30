@@ -1,0 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-zen-background text-zen-text font-zen antialiased;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+@layer components {
+  .btn-zen {
+    @apply px-4 py-2 rounded-full bg-zen-primary text-white font-medium shadow-sm transition-all duration-300 hover:bg-zen-primaryHover hover:shadow-md focus:outline-none focus:ring-2 focus:ring-zen-primary focus:ring-offset-2 focus:ring-offset-zen-background active:scale-95;
+  }
+  
+  .btn-zen-secondary {
+    @apply px-4 py-2 rounded-full bg-white text-zen-text border border-zen-border shadow-sm transition-all duration-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-zen-border active:scale-95;
+  }
+
+  .input-zen {
+    @apply w-full px-4 py-2 rounded-lg border border-zen-border bg-white text-zen-text placeholder-zen-textMuted transition-colors duration-300 focus:outline-none focus:border-zen-primary focus:ring-1 focus:ring-zen-primary;
+  }
+
+  .card-zen {
+    @apply bg-zen-surface rounded-2xl shadow-zen border border-zen-border/50;
+  }
+}
