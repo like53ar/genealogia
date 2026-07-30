@@ -66,6 +66,20 @@ import { Persona, PersonaCreate, ApiService } from '../../core/api.service';
             </div>
           </div>
 
+          <!-- Fecha de matrimonio — solo para PAREJA -->
+          <div *ngIf="relativeType === 'PAREJA'" class="wedding-field">
+            <label class="block text-xs font-medium mb-1 ml-1" style="color: #8B6A3E;">
+              💍 Fecha de matrimonio
+            </label>
+            <input
+              type="date"
+              [(ngModel)]="fechaMatrimonio"
+              name="fechaMatrimonio"
+              class="input-zen"
+              style="border-color: #C9B99A;"
+            />
+          </div>
+
           <div class="pt-4 flex gap-3">
             <button type="button" (click)="close()" class="flex-1 btn-zen-secondary py-2">Cancelar</button>
             <button type="submit" [disabled]="!form.valid || loading" class="flex-1 btn-zen py-2">
@@ -81,6 +95,12 @@ import { Persona, PersonaCreate, ApiService } from '../../core/api.service';
     .animate-scale-up { animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes scaleUp { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .wedding-field {
+      background: #FDF8F0;
+      border: 1px solid #E8D9C0;
+      border-radius: 12px;
+      padding: 12px;
+    }
   `]
 })
 export class AddRelativeDialogComponent {
@@ -89,12 +109,17 @@ export class AddRelativeDialogComponent {
   @Input() relativeType: 'PADRE' | 'PAREJA' | 'HIJO' = 'PADRE';
   
   @Output() closed = new EventEmitter<void>();
-  @Output() saved = new EventEmitter<{personaData: PersonaCreate, relativeType: 'PADRE' | 'PAREJA' | 'HIJO'}>();
+  @Output() saved = new EventEmitter<{
+    personaData: PersonaCreate;
+    relativeType: 'PADRE' | 'PAREJA' | 'HIJO';
+    fechaMatrimonio?: string;
+  }>();
 
   persona: PersonaCreate = { nombre: '', apellido: '', genero: '', fecha_nacimiento: '', fecha_muerte: '', lugar_nacimiento: '', notas: '' };
   ciudad = '';
   distrito = '';
   pais = '';
+  fechaMatrimonio = '';
   loading = false;
 
   getRelativeTypeName() {
@@ -113,15 +138,16 @@ export class AddRelativeDialogComponent {
   }
 
   onSubmit() {
-    if (this.persona.nombre && this.persona.apellido) {
+    if (this.persona.nombre && this.persona.apellido && !this.loading) {
+      this.loading = true;  // bloquea el botón de inmediato
       const ubicacion = [this.ciudad, this.distrito, this.pais].filter(x => x).join(', ');
       this.persona.lugar_nacimiento = ubicacion;
       
       this.saved.emit({
         personaData: { ...this.persona },
-        relativeType: this.relativeType
+        relativeType: this.relativeType,
+        fechaMatrimonio: this.fechaMatrimonio || undefined,
       });
-      // form reset is handled by parent upon success
     }
   }
 
@@ -130,6 +156,7 @@ export class AddRelativeDialogComponent {
     this.ciudad = '';
     this.distrito = '';
     this.pais = '';
+    this.fechaMatrimonio = '';
     this.loading = false;
   }
 }
