@@ -16,7 +16,14 @@ import { Persona, PersonaCreate, ApiService } from '../../core/api.service';
         </button>
 
         <h2 class="text-2xl font-light text-zen-text mb-1">Añadir familiar</h2>
-        <p class="text-sm text-zen-textMuted mb-6">Agregando {{ getRelativeTypeName() }} de {{ targetPerson?.nombre }}</p>
+        <p class="text-sm text-zen-textMuted mb-6">
+          <ng-container *ngIf="targetPerson; else primeraPersona">
+            Agregando {{ getRelativeTypeName() }} de {{ targetPerson.nombre }}
+          </ng-container>
+          <ng-template #primeraPersona>
+            Agregando la primera persona del árbol familiar
+          </ng-template>
+        </p>
 
         <form (ngSubmit)="onSubmit()" #form="ngForm" class="space-y-4">
           <div class="grid grid-cols-2 gap-4">

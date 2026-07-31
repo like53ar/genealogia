@@ -86,14 +86,14 @@ type Vista = 'home' | 'tree';
           </button>
 
           <!-- EDITAR ÁRBOL -->
-          <button (click)="abrirArbol()" class="btn-zen-accion btn-zen-editar" id="btn-editar-arbol">
+          <button (click)="abrirModalSeleccionarArbol()" class="btn-zen-accion btn-zen-editar" id="btn-editar-arbol">
             <span style="font-size: 1.3rem;">✏️</span>
             <span style="flex: 1; text-align: center; letter-spacing: 0.18em;">EDITAR ÁRBOL</span>
             <span style="opacity: 0.6; font-size: 1.1rem;">›</span>
           </button>
 
           <!-- BORRAR ÁRBOL -->
-          <button (click)="confirmarBorrado()" class="btn-zen-accion btn-zen-borrar" id="btn-borrar-arbol">
+          <button (click)="abrirModalBorrarArbol()" class="btn-zen-accion btn-zen-borrar" id="btn-borrar-arbol">
             <span style="font-size: 1.3rem;">🍂</span>
             <span style="flex: 1; text-align: center; letter-spacing: 0.18em;">BORRAR ÁRBOL</span>
             <span style="opacity: 0.6; font-size: 1.1rem;">›</span>
@@ -126,19 +126,31 @@ type Vista = 'home' | 'tree';
               {{ arbolActivo.nombre }}
             </span>
           </div>
-          <button (click)="volverInicio()" id="btn-volver-inicio" style="
-            font-family: 'Georgia', serif; font-size: 0.78rem; letter-spacing: 0.12em;
-            text-transform: uppercase; color: #6b6a62;
-            background: rgba(255,255,255,0.45); border: 1px solid rgba(139,130,110,0.3);
-            padding: 0.4em 1.2em; border-radius: 999px; cursor: pointer; transition: all 0.2s;
-          "
-          onmouseover="this.style.background='rgba(255,255,255,0.7)'"
-          onmouseout="this.style.background='rgba(255,255,255,0.45)'">
-            ← Inicio
-          </button>
+          <div style="display: flex; align-items: center; gap: 0.8rem;">
+            <button (click)="abrirModalSeleccionarArbol()" style="
+              font-family: 'Georgia', serif; font-size: 0.78rem; letter-spacing: 0.12em;
+              text-transform: uppercase; color: #6b6a62;
+              background: rgba(255,255,255,0.45); border: 1px solid rgba(139,130,110,0.3);
+              padding: 0.4em 1.2em; border-radius: 999px; cursor: pointer; transition: all 0.2s;
+            "
+            onmouseover="this.style.background='rgba(255,255,255,0.7)'"
+            onmouseout="this.style.background='rgba(255,255,255,0.45)'">
+              Cambiar Árbol
+            </button>
+            <button (click)="volverInicio()" id="btn-volver-inicio" style="
+              font-family: 'Georgia', serif; font-size: 0.78rem; letter-spacing: 0.12em;
+              text-transform: uppercase; color: #6b6a62;
+              background: rgba(255,255,255,0.45); border: 1px solid rgba(139,130,110,0.3);
+              padding: 0.4em 1.2em; border-radius: 999px; cursor: pointer; transition: all 0.2s;
+            "
+            onmouseover="this.style.background='rgba(255,255,255,0.7)'"
+            onmouseout="this.style.background='rgba(255,255,255,0.45)'">
+              ← Inicio
+            </button>
+          </div>
         </header>
         <div style="padding-top: 64px;">
-          <app-tree-container></app-tree-container>
+          <app-tree-container [arbolId]="arbolActivo?.id || null"></app-tree-container>
         </div>
       </div>
 
@@ -292,43 +304,189 @@ type Vista = 'home' | 'tree';
         </div>
       </div>
 
-      <!-- ═══════════ MODAL: CONFIRMACIÓN BORRADO ═══════════ -->
-      <div *ngIf="mostrarConfirmBorrado"
+      <!-- ═══════════ MODAL: SELECCIONAR ÁRBOL ═══════════ -->
+      <div *ngIf="mostrarModalSeleccionar"
         style="
           position: fixed; inset: 0; z-index: 100;
-          background: rgba(55,50,40,0.5);
-          backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+          background: rgba(55,50,40,0.52);
+          backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
           display: flex; align-items: center; justify-content: center; padding: 1rem;
-        ">
+        "
+        (click)="cerrarModalSeleccionar()">
+
         <div style="
-          background: rgba(252,250,245,0.94);
-          backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-          border: 1px solid rgba(255,255,255,0.75); border-radius: 24px;
-          padding: 2.5rem 2.5rem 2rem; max-width: 380px; width: 100%;
-          text-align: center; box-shadow: 0 12px 48px rgba(70,60,40,0.2);
-        ">
-          <div style="font-size: 2.8rem; margin-bottom: 0.8rem;">🍂</div>
-          <h2 style="font-family: 'Georgia', serif; font-size: 1.15rem; letter-spacing: 0.14em; color: #3b3a36; text-transform: uppercase; margin: 0 0 0.7rem;">¿Borrar el árbol?</h2>
-          <p style="font-family: 'Georgia', serif; color: #7a7368; font-size: 0.9rem; line-height: 1.65; margin: 0 0 2rem;">Esta acción eliminará todos los datos del árbol genealógico de forma permanente.</p>
-          <div style="display: flex; gap: 0.8rem; justify-content: center;">
-            <button (click)="cancelarBorrado()" style="
-              font-family: 'Georgia', serif; font-size: 0.83rem; letter-spacing: 0.1em;
-              text-transform: uppercase; color: #7a7368;
-              background: rgba(255,255,255,0.65); border: 1px solid rgba(139,130,110,0.35);
-              padding: 0.6em 1.5em; border-radius: 999px; cursor: pointer; transition: all 0.2s;
-            "
-            onmouseover="this.style.background='rgba(255,255,255,0.95)'"
-            onmouseout="this.style.background='rgba(255,255,255,0.65)'">Cancelar</button>
-            <button (click)="borrarArbol()" id="btn-confirmar-borrado" style="
-              font-family: 'Georgia', serif; font-size: 0.83rem; letter-spacing: 0.1em;
-              text-transform: uppercase; color: white;
-              background: linear-gradient(135deg, #9a6a5a, #7a4a3a);
-              border: none; padding: 0.6em 1.6em; border-radius: 999px;
-              cursor: pointer; transition: opacity 0.2s;
-              box-shadow: 0 2px 14px rgba(154,106,90,0.4);
-            "
-            onmouseover="this.style.opacity='0.82'"
-            onmouseout="this.style.opacity='1'">Sí, borrar</button>
+          background: rgba(252,250,245,0.96);
+          backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(255,255,255,0.8); border-radius: 24px;
+          padding: 2.5rem; max-width: 520px; width: 100%; max-height: 85vh;
+          display: flex; flex-direction: column;
+          box-shadow: 0 16px 56px rgba(70,60,40,0.22); position: relative;
+        "
+        (click)="$event.stopPropagation()">
+
+          <button (click)="cerrarModalSeleccionar()" style="
+            position: absolute; top: 1.2rem; right: 1.2rem;
+            background: rgba(200,195,185,0.35); border: none;
+            width: 30px; height: 30px; border-radius: 50%;
+            font-size: 1rem; color: #7a7368; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+          ">✕</button>
+
+          <div style="text-align: center; margin-bottom: 1.5rem;">
+            <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">✏️</div>
+            <h2 style="
+              font-family: 'Georgia', serif; font-size: 1.3rem; font-weight: 700;
+              letter-spacing: 0.16em; color: #3b3a36; text-transform: uppercase; margin: 0 0 0.4rem;
+            ">Seleccionar Árbol</h2>
+            <div style="height: 2px; width: 80px; background: linear-gradient(90deg, transparent, #8a9a6a, transparent); margin: 0 auto;"></div>
+          </div>
+
+          <!-- Loading -->
+          <div *ngIf="cargandoArboles" style="text-align: center; padding: 2rem; color: #7a7368; font-family: 'Georgia', serif;">
+            Cargando árboles...
+          </div>
+
+          <!-- Lista de árboles -->
+          <div *ngIf="!cargandoArboles" style="overflow-y: auto; display: flex; flex-direction: column; gap: 0.8rem; padding-right: 4px;">
+            <div *ngIf="arboles.length === 0" style="text-align: center; padding: 2rem; color: #7a7368; font-family: 'Georgia', serif;">
+              No tenés árboles creados aún.
+            </div>
+
+            <div *ngFor="let arbol of arboles"
+              (click)="seleccionarArbol(arbol)"
+              style="
+                background: rgba(255,255,255,0.7);
+                border: 1.5px solid rgba(138,154,106,0.35);
+                border-radius: 14px; padding: 1rem 1.2rem;
+                display: flex; align-items: center; justify-content: space-between;
+                cursor: pointer; transition: all 0.2s;
+              "
+              onmouseover="this.style.background='rgba(255,255,255,0.95)'; this.style.borderColor='rgba(138,154,106,0.7)';"
+              onmouseout="this.style.background='rgba(255,255,255,0.7)'; this.style.borderColor='rgba(138,154,106,0.35)';">
+              <div>
+                <div style="font-family: 'Georgia', serif; font-size: 1.05rem; font-weight: 700; color: #3b3a36;">
+                  {{ arbol.nombre }}
+                </div>
+                <div *ngIf="arbol.descripcion" style="font-family: 'Georgia', serif; font-size: 0.82rem; color: #7a7368; margin-top: 0.2rem;">
+                  {{ arbol.descripcion }}
+                </div>
+              </div>
+              <span style="font-family: 'Georgia', serif; font-size: 0.8rem; color: #8a9a6a; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600;">
+                Abrir ›
+              </span>
+            </div>
+          </div>
+
+          <div style="margin-top: 1.5rem; text-align: center;">
+            <button (click)="cerrarModalSeleccionar(); abrirModalCrear();" style="
+              font-family: 'Georgia', serif; font-size: 0.8rem; letter-spacing: 0.1em;
+              text-transform: uppercase; color: #6b6a62; background: transparent;
+              border: 1px dashed rgba(139,130,110,0.5); padding: 0.6em 1.2em; border-radius: 10px; cursor: pointer;
+            ">
+              + Crear nuevo árbol
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ MODAL: BORRAR ÁRBOL ═══════════ -->
+      <div *ngIf="mostrarModalBorrar"
+        style="
+          position: fixed; inset: 0; z-index: 100;
+          background: rgba(55,50,40,0.52);
+          backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+          display: flex; align-items: center; justify-content: center; padding: 1rem;
+        "
+        (click)="cerrarModalBorrar()">
+
+        <div style="
+          background: rgba(252,250,245,0.96);
+          backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(255,255,255,0.8); border-radius: 24px;
+          padding: 2.5rem; max-width: 480px; width: 100%; max-height: 85vh;
+          display: flex; flex-direction: column;
+          box-shadow: 0 16px 56px rgba(70,60,40,0.22); position: relative;
+        "
+        (click)="$event.stopPropagation()">
+
+          <button (click)="cerrarModalBorrar()" style="
+            position: absolute; top: 1.2rem; right: 1.2rem;
+            background: rgba(200,195,185,0.35); border: none;
+            width: 30px; height: 30px; border-radius: 50%;
+            font-size: 1rem; color: #7a7368; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+          ">✕</button>
+
+          <div style="text-align: center; margin-bottom: 1.5rem;">
+            <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🍂</div>
+            <h2 style="
+              font-family: 'Georgia', serif; font-size: 1.3rem; font-weight: 700;
+              letter-spacing: 0.16em; color: #3b3a36; text-transform: uppercase; margin: 0 0 0.4rem;
+            ">Borrar Árbol</h2>
+            <div style="height: 2px; width: 80px; background: linear-gradient(90deg, transparent, #9a6a5a, transparent); margin: 0 auto;"></div>
+          </div>
+
+          <!-- Confirmación específica de borrado -->
+          <div *ngIf="arbolABorrar" style="text-align: center; padding: 1rem 0;">
+            <p style="font-family: 'Georgia', serif; color: #3b3a36; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
+              ¿Estás seguro de que querés eliminar el árbol <strong>"{{ arbolABorrar.nombre }}"</strong>?
+              <br><span style="font-size: 0.85rem; color: #9a5046;">Se eliminarán permanentemente todas las personas y relaciones de la familia.</span>
+            </p>
+            <div style="display: flex; gap: 0.8rem; justify-content: center;">
+              <button (click)="cancelarBorradoEspecifico()" style="
+                font-family: 'Georgia', serif; font-size: 0.83rem; letter-spacing: 0.1em;
+                text-transform: uppercase; color: #7a7368; background: rgba(255,255,255,0.65);
+                border: 1px solid rgba(139,130,110,0.35); padding: 0.6em 1.4em; border-radius: 10px; cursor: pointer;
+              ">Cancelar</button>
+
+              <button (click)="ejecutarBorradoArbol()" [disabled]="borrando" style="
+                font-family: 'Georgia', serif; font-size: 0.83rem; font-weight: 600;
+                letter-spacing: 0.1em; text-transform: uppercase; color: white;
+                background: linear-gradient(135deg, #9a6a5a, #7a4a3a);
+                border: none; padding: 0.6em 1.5em; border-radius: 10px; cursor: pointer;
+                box-shadow: 0 3px 14px rgba(154,106,90,0.35);
+              ">
+                {{ borrando ? 'Eliminando...' : 'Sí, eliminar' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Lista para elegir cuál borrar -->
+          <div *ngIf="!arbolABorrar" style="overflow-y: auto; display: flex; flex-direction: column; gap: 0.8rem;">
+            <div *ngIf="cargandoArboles" style="text-align: center; padding: 2rem; color: #7a7368; font-family: 'Georgia', serif;">
+              Cargando árboles...
+            </div>
+
+            <div *ngIf="!cargandoArboles && arboles.length === 0" style="text-align: center; padding: 2rem; color: #7a7368; font-family: 'Georgia', serif;">
+              No tenés árboles creados para borrar.
+            </div>
+
+            <div *ngFor="let arbol of arboles"
+              style="
+                background: rgba(255,255,255,0.7); border: 1.5px solid rgba(154,106,90,0.25);
+                border-radius: 14px; padding: 1rem 1.2rem;
+                display: flex; align-items: center; justify-content: space-between;
+              ">
+              <div>
+                <div style="font-family: 'Georgia', serif; font-size: 1rem; font-weight: 700; color: #3b3a36;">
+                  {{ arbol.nombre }}
+                </div>
+                <div *ngIf="arbol.descripcion" style="font-family: 'Georgia', serif; font-size: 0.8rem; color: #7a7368; margin-top: 0.1rem;">
+                  {{ arbol.descripcion }}
+                </div>
+              </div>
+
+              <button (click)="solicitarBorradoArbol(arbol)" style="
+                font-family: 'Georgia', serif; font-size: 0.78rem; letter-spacing: 0.08em;
+                text-transform: uppercase; color: white; background: #9a6a5a;
+                border: none; padding: 0.45em 0.9em; border-radius: 8px; cursor: pointer;
+                transition: background 0.2s;
+              "
+              onmouseover="this.style.background='#8a5a4a'"
+              onmouseout="this.style.background='#9a6a5a'">
+                🗑️ Borrar
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -342,6 +500,8 @@ export class AppComponent implements OnInit {
 
   vista: Vista = 'home';
   arbolActivo: Arbol | null = null;
+  arboles: Arbol[] = [];
+  cargandoArboles = false;
 
   // Modal crear
   mostrarModalCrear = false;
@@ -349,8 +509,13 @@ export class AppComponent implements OnInit {
   guardando = false;
   errorCrear = '';
 
+  // Modal seleccionar / editar
+  mostrarModalSeleccionar = false;
+
   // Modal borrar
-  mostrarConfirmBorrado = false;
+  mostrarModalBorrar = false;
+  arbolABorrar: Arbol | null = null;
+  borrando = false;
 
   ngOnInit() {}
 
@@ -391,27 +556,92 @@ export class AppComponent implements OnInit {
     });
   }
 
+  // ── Seleccionar / Editar Árbol ───────────────────────
+  abrirModalSeleccionarArbol() {
+    this.cargandoArboles = true;
+    this.mostrarModalSeleccionar = true;
+    this.api.getArboles().subscribe({
+      next: (arboles) => {
+        this.arboles = arboles;
+        this.cargandoArboles = false;
+      },
+      error: (err) => {
+        this.cargandoArboles = false;
+        console.error('Error al cargar árboles', err);
+      }
+    });
+  }
+
+  cerrarModalSeleccionar() {
+    this.mostrarModalSeleccionar = false;
+  }
+
+  seleccionarArbol(arbol: Arbol) {
+    this.arbolActivo = arbol;
+    this.mostrarModalSeleccionar = false;
+    this.vista = 'tree';
+  }
+
+  // ── Borrar Árbol ─────────────────────────────────────
+  abrirModalBorrarArbol() {
+    this.cargandoArboles = true;
+    this.arbolABorrar = null;
+    this.mostrarModalBorrar = true;
+    this.api.getArboles().subscribe({
+      next: (arboles) => {
+        this.arboles = arboles;
+        this.cargandoArboles = false;
+      },
+      error: (err) => {
+        this.cargandoArboles = false;
+        console.error('Error al cargar árboles para borrar', err);
+      }
+    });
+  }
+
+  cerrarModalBorrar() {
+    if (!this.borrando) {
+      this.mostrarModalBorrar = false;
+      this.arbolABorrar = null;
+    }
+  }
+
+  solicitarBorradoArbol(arbol: Arbol) {
+    this.arbolABorrar = arbol;
+  }
+
+  cancelarBorradoEspecifico() {
+    this.arbolABorrar = null;
+  }
+
+  ejecutarBorradoArbol() {
+    if (!this.arbolABorrar) return;
+
+    const targetId = this.arbolABorrar.id;
+    this.borrando = true;
+
+    this.api.deleteArbol(targetId).subscribe({
+      next: () => {
+        this.borrando = false;
+        this.arboles = this.arboles.filter(a => a.id !== targetId);
+        if (this.arbolActivo?.id === targetId) {
+          this.arbolActivo = null;
+        }
+        this.arbolABorrar = null;
+      },
+      error: (err) => {
+        this.borrando = false;
+        console.error('Error al borrar el árbol', err);
+      }
+    });
+  }
+
   // ── Navegar ──────────────────────────────────────────
   abrirArbol() {
-    this.vista = 'tree';
+    this.abrirModalSeleccionarArbol();
   }
 
   volverInicio() {
     this.vista = 'home';
-  }
-
-  // ── Borrar Árbol ─────────────────────────────────────
-  confirmarBorrado() {
-    this.mostrarConfirmBorrado = true;
-  }
-
-  cancelarBorrado() {
-    this.mostrarConfirmBorrado = false;
-  }
-
-  borrarArbol() {
-    // TODO: conectar con API para borrar el árbol activo
-    this.mostrarConfirmBorrado = false;
-    console.log('Árbol borrado');
   }
 }

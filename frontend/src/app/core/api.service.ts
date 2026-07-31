@@ -8,6 +8,7 @@ export interface Arbol {
   nombre: string;
   descripcion?: string;
   fecha_creacion?: string;
+  cantidad_personas?: number;
 }
 
 export interface ArbolCreate {
@@ -18,6 +19,7 @@ export interface ArbolCreate {
 // ── Interfaces Persona ────────────────────────────────
 export interface Persona {
   id: string;
+  arbol_id?: string;
   nombre: string;
   apellido: string;
   genero?: string;
@@ -35,6 +37,7 @@ export interface PersonaCreate {
   fecha_muerte?: string;
   lugar_nacimiento?: string;
   notas?: string;
+  arbol_id?: string;
 }
 
 export interface Relacion {
@@ -82,9 +85,12 @@ export class ApiService {
     return this.http.delete(`${this.apiUrl}/arboles/${id}`);
   }
 
-  // ── Personas ──────────────────────────────────────────
-  getPersonas(): Observable<Persona[]> {
-    return this.http.get<Persona[]>(`${this.apiUrl}/personas/`);
+  // ── Personas ───────────────────────────────────
+  getPersonas(arbolId?: string): Observable<Persona[]> {
+    const url = arbolId
+      ? `${this.apiUrl}/personas/?arbol_id=${arbolId}`
+      : `${this.apiUrl}/personas/`;
+    return this.http.get<Persona[]>(url);
   }
 
   createPersona(persona: PersonaCreate): Observable<Persona> {

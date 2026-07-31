@@ -194,11 +194,9 @@ El sistema utiliza una paleta **zen** coherente en todos los elementos:
 - [x] API REST para personas, relaciones, lugares y parentesco
 - [x] Modelo de datos relacional (Arbol → Persona → Relacion)
 - [x] Entorno Python 3.12 con dependencias estables
-
-### 🔄 En progreso
-- [ ] Vincular personas al árbol activo al momento de la carga
-- [ ] Botón "Editar Árbol" → lista de árboles existentes
-- [ ] Botón "Borrar Árbol" → conectar con API (actualmente solo UI)
+- [x] Vincular personas al árbol activo al momento de la carga y creación
+- [x] Botón "Editar Árbol" → selección de árboles existentes
+- [x] Botón "Borrar Árbol" → eliminación real vía API REST con borrado en cascada
 
 ### 🔮 Próximos pasos
 - [ ] Visualización gráfica del árbol con nodos y conexiones

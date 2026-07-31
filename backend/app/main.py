@@ -86,10 +86,12 @@ class PersonaSimpleCreate(BaseModel):
     fecha_muerte: Optional[date] = None        # alias amigable
     lugar_nacimiento: Optional[str] = None     # texto libre → geocodificado
     notas: Optional[str] = None
+    arbol_id: Optional[UUID] = None            # FK al árbol familiar
 
 
 class PersonaSimple(BaseModel):
     id: UUID
+    arbol_id: Optional[UUID] = None
     nombre: str
     apellido: str
     genero: Optional[str] = None
@@ -123,6 +125,12 @@ def create_persona(persona: PersonaSimpleCreate, db: Session = Depends(database.
             db.flush()
         lugar_id = db_lugar.id
 
+    # Verificar que el árbol exista si se provee arbol_id
+    if persona.arbol_id:
+        arbol = db.query(models.Arbol).filter(models.Arbol.id == persona.arbol_id).first()
+        if not arbol:
+            raise HTTPException(status_code=404, detail="Árbol no encontrado")
+
     db_persona = models.Persona(
         nombre=persona.nombre,
         apellido=persona.apellido,
@@ -131,6 +139,7 @@ def create_persona(persona: PersonaSimpleCreate, db: Session = Depends(database.
         fecha_fallecimiento=persona.fecha_muerte,
         lugar_nacimiento_id=lugar_id,
         biografia=persona.notas,
+        arbol_id=persona.arbol_id,  # ← vincula al árbol familiar
     )
     db.add(db_persona)
     db.commit()
@@ -139,6 +148,7 @@ def create_persona(persona: PersonaSimpleCreate, db: Session = Depends(database.
     # Build response manually to include flat lugar string
     return PersonaSimple(
         id=db_persona.id,
+        arbol_id=db_persona.arbol_id,
         nombre=db_persona.nombre,
         apellido=db_persona.apellido,
         genero=db_persona.genero,
@@ -150,13 +160,23 @@ def create_persona(persona: PersonaSimpleCreate, db: Session = Depends(database.
 
 
 @app.get("/personas/", response_model=List[PersonaSimple])
-def read_personas(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
-    personas = db.query(models.Persona).offset(skip).limit(limit).all()
+def read_personas(
+    skip: int = 0,
+    limit: int = 100,
+    arbol_id: Optional[UUID] = Query(None, description="Filtrar por árbol familiar"),
+    db: Session = Depends(database.get_db)
+):
+    """Lista personas. Si se pasa arbol_id, filtra solo los integrantes de esa familia."""
+    query = db.query(models.Persona)
+    if arbol_id:
+        query = query.filter(models.Persona.arbol_id == arbol_id)
+    personas = query.offset(skip).limit(limit).all()
     result = []
     for p in personas:
         lugar_str = p.lugar_nacimiento.nombre if p.lugar_nacimiento else None
         result.append(PersonaSimple(
             id=p.id,
+            arbol_id=p.arbol_id,
             nombre=p.nombre,
             apellido=p.apellido,
             genero=p.genero,
