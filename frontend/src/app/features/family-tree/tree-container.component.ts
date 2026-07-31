@@ -32,6 +32,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
               [person]="gp"
               [role]="'ancestor'"
               [kinshipLabel]="kinshipLabels.get(gp.id) || ''"
+              [parentCount]="getParentCount(gp)"
               (nodeClick)="onPersonNodeClick(gp)"
               (addAction)="openAddRelative(gp, $event.type)"
             ></app-person-node>
@@ -52,6 +53,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
               [person]="parents[0]"
               [role]="'parent'"
               [kinshipLabel]="kinshipLabels.get(parents[0].id) || ''"
+              [parentCount]="getParentCount(parents[0])"
               (nodeClick)="onPersonNodeClick(parents[0])"
               (addAction)="openAddRelative(parents[0], $event.type)"
             ></app-person-node>
@@ -66,6 +68,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
               [person]="parents[1]"
               [role]="'parent'"
               [kinshipLabel]="kinshipLabels.get(parents[1].id) || ''"
+              [parentCount]="getParentCount(parents[1])"
               (nodeClick)="onPersonNodeClick(parents[1])"
               (addAction)="openAddRelative(parents[1], $event.type)"
             ></app-person-node>
@@ -86,6 +89,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
               [person]="rootPerson"
               [role]="'root'"
               [kinshipLabel]="''"
+              [parentCount]="getParentCount(rootPerson)"
               (nodeClick)="onPersonNodeClick(rootPerson)"
               (addAction)="openAddRelative(rootPerson, $event.type)"
             ></app-person-node>
@@ -111,6 +115,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
                 [person]="partner"
                 [role]="'partner'"
                 [kinshipLabel]="kinshipLabels.get(partner.id) || ''"
+                [parentCount]="getParentCount(partner)"
                 (nodeClick)="onPersonNodeClick(partner)"
                 (addAction)="openAddRelative(partner, $event.type)"
               ></app-person-node>
@@ -138,6 +143,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
               [person]="child"
               [role]="'child'"
               [kinshipLabel]="kinshipLabels.get(child.id) || ''"
+              [parentCount]="getParentCount(child)"
               (nodeClick)="onPersonNodeClick(child)"
               (addAction)="openAddRelative(child, $event.type)"
             ></app-person-node>
@@ -605,6 +611,13 @@ export class TreeContainerComponent implements OnInit, OnChanges {
     try {
       return new Date(this.partnerRelation.fecha_inicio + 'T00:00:00').getFullYear().toString();
     } catch { return null; }
+  }
+
+  getParentCount(person: Persona | null): number {
+    if (!person) return 0;
+    return this.allRelations.filter(
+      r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === person.id
+    ).length;
   }
 
   showToast(msg: string) {
