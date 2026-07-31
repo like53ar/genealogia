@@ -41,65 +41,32 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
       </div>
 
       <!-- Action buttons below card — contextual by role -->
+      <!-- Action buttons below card — contextual by role -->
       <div class="action-buttons">
 
-        <!-- ROOT: Pareja + Hijo/a -->
-        <ng-container *ngIf="role === 'root'">
-          <button
-            (click)="addAction.emit({person: person, type: 'PAREJA', subType: 'PAREJA'}); $event.stopPropagation()"
-            class="action-btn action-btn-pareja"
-            title="Añadir Pareja">
-            💑 Pareja
-          </button>
-          <button
-            (click)="addAction.emit({person: person, type: 'HIJO', subType: 'HIJO'}); $event.stopPropagation()"
-            class="action-btn action-btn-hijo"
-            title="Añadir Hijo/a">
-            + Hijo/a
-          </button>
-        </ng-container>
+        <!-- Button +Padres: visible if less than 2 parents are registered -->
+        <button *ngIf="parentCount < 2"
+          (click)="addAction.emit({person: person, type: 'PADRE', subType: 'PADRE'}); $event.stopPropagation()"
+          class="action-btn action-btn-padre"
+          title="Añadir Padre o Madre">
+          + {{ parentCount === 1 ? 'Padre/Madre' : 'Padres' }}
+        </button>
 
-        <!-- PARTNER: Hijo/a (comparte hijos con root) -->
-        <ng-container *ngIf="role === 'partner'">
-          <button
-            (click)="addAction.emit({person: person, type: 'HIJO', subType: 'HIJO'}); $event.stopPropagation()"
-            class="action-btn action-btn-hijo"
-            title="Añadir Hijo/a">
-            + Hijo/a
-          </button>
-        </ng-container>
+        <!-- Button Pareja: for root, parent, ancestor, child -->
+        <button *ngIf="role !== 'partner'"
+          (click)="addAction.emit({person: person, type: 'PAREJA', subType: 'PAREJA'}); $event.stopPropagation()"
+          class="action-btn action-btn-pareja"
+          title="Añadir Pareja">
+          💑 Pareja
+        </button>
 
-        <!-- PARENT / ANCESTOR: solo Padres de ese antepasado -->
-        <ng-container *ngIf="role === 'parent' || role === 'ancestor'">
-          <button
-            (click)="addAction.emit({person: person, type: 'PADRE', subType: 'PADRE'}); $event.stopPropagation()"
-            class="action-btn"
-            title="Añadir Padre o Madre">
-            + Padres
-          </button>
-          <button
-            (click)="addAction.emit({person: person, type: 'PAREJA', subType: 'PAREJA'}); $event.stopPropagation()"
-            class="action-btn action-btn-pareja"
-            title="Añadir Pareja">
-            💑 Pareja
-          </button>
-        </ng-container>
-
-        <!-- CHILD: Pareja + Hijo/a (puede navegar a su propio árbol) -->
-        <ng-container *ngIf="role === 'child'">
-          <button
-            (click)="addAction.emit({person: person, type: 'PAREJA', subType: 'PAREJA'}); $event.stopPropagation()"
-            class="action-btn action-btn-pareja"
-            title="Añadir Pareja">
-            💑 Pareja
-          </button>
-          <button
-            (click)="addAction.emit({person: person, type: 'HIJO', subType: 'HIJO'}); $event.stopPropagation()"
-            class="action-btn action-btn-hijo"
-            title="Añadir Hijo/a">
-            + Hijo/a
-          </button>
-        </ng-container>
+        <!-- Button Hijo/a: for root, partner, child -->
+        <button *ngIf="role === 'root' || role === 'partner' || role === 'child'"
+          (click)="addAction.emit({person: person, type: 'HIJO', subType: 'HIJO'}); $event.stopPropagation()"
+          class="action-btn action-btn-hijo"
+          title="Añadir Hijo/a">
+          + Hijo/a
+        </button>
 
       </div>
 
@@ -262,6 +229,16 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
       color: #4A7A50;
     }
 
+    .action-btn-padre {
+      border-color: #B0C4DE;
+      color: #3B5998;
+    }
+    .action-btn-padre:hover {
+      background: #F0F4F8;
+      border-color: #7B96D4;
+      color: #1E3A8A;
+    }
+
     .action-btn-pareja {
       border-color: #C9B99A;
       color: #7A6040;
@@ -336,6 +313,7 @@ export class PersonNodeComponent {
   @Input() person!: Persona;
   @Input() role: NodeRole = 'ancestor';
   @Input() kinshipLabel = '';
+  @Input() parentCount = 0;
 
   @Output() nodeClick = new EventEmitter<Persona>();
   @Output() addAction = new EventEmitter<{person: Persona, type: 'PADRE' | 'PAREJA' | 'HIJO', subType: string}>();

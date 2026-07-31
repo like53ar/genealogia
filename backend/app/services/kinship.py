@@ -53,8 +53,10 @@ def infer_kinship(db: Session, persona_a_id: UUID, persona_b_id: UUID) -> str:
                     return "Abuelo/Abuela"
                 elif dist_a_b == 3:
                     return "Bisabuelo/Bisabuela"
+                elif dist_a_b == 4:
+                    return "Tatarabuelo/Tatarabuela"
                 else:
-                    return f"Ancestro (distancia {dist_a_b})"
+                    return f"Ancestro ({dist_a_b}ª generación)"
         except nx.NetworkXNoPath:
             pass
 
@@ -69,8 +71,10 @@ def infer_kinship(db: Session, persona_a_id: UUID, persona_b_id: UUID) -> str:
                     return "Nieto/Nieta"
                 elif dist_b_a == 3:
                     return "Bisnieto/Bisnieta"
+                elif dist_b_a == 4:
+                    return "Tataranieto/Tataranieta"
                 else:
-                    return f"Descendiente (distancia {dist_b_a})"
+                    return f"Descendiente ({dist_b_a}ª generación)"
         except nx.NetworkXNoPath:
             pass
             
