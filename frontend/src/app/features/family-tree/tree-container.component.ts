@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService, Persona, Relacion, PersonaCreate } from '../../core/api.service';
 import { PersonNodeComponent, NodeRole } from './person-node.component';
@@ -147,8 +147,31 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
       </div>
 
       <!-- Empty state -->
-      <div *ngIf="!loading && !rootPerson" class="text-zen-textMuted">
-        No hay personas en el árbol.
+      <div *ngIf="!loading && !rootPerson" style="
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: 3.5rem 2rem; text-align: center; background: rgba(255,255,255,0.55);
+        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border-radius: 24px; border: 1.5px dashed rgba(138,154,106,0.45);
+        max-width: 420px; margin: 3rem auto; box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+      ">
+        <div style="font-size: 3rem; margin-bottom: 0.8rem;">🌱</div>
+        <h3 style="font-family: 'Georgia', serif; font-size: 1.2rem; color: #3b3a36; font-weight: 700; margin: 0 0 0.5rem; text-transform: uppercase; letter-spacing: 0.08em;">
+          Árbol Vacío
+        </h3>
+        <p style="font-family: 'Georgia', serif; font-size: 0.88rem; color: #7a7368; line-height: 1.6; margin: 0 0 1.8rem;">
+          Este árbol aún no tiene integrantes. Agregá a la primera persona para comenzar a construir la genealogía familiar.
+        </p>
+        <button (click)="openAddFirstPerson()" style="
+          font-family: 'Georgia', serif; font-size: 0.85rem; font-weight: 600;
+          letter-spacing: 0.12em; text-transform: uppercase; color: white;
+          background: linear-gradient(135deg, #7a8c5a, #5a6a42);
+          border: none; padding: 0.8em 1.8em; border-radius: 12px; cursor: pointer;
+          box-shadow: 0 4px 18px rgba(107,124,85,0.35); transition: transform 0.2s;
+        "
+        onmouseover="this.style.transform='translateY(-2px)'"
+        onmouseout="this.style.transform='translateY(0)'">
+          + Agregar primera persona
+        </button>
       </div>
 
     </div>
@@ -426,8 +449,10 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
     }
   `]
 })
-export class TreeContainerComponent implements OnInit {
+export class TreeContainerComponent implements OnInit, OnChanges {
   private api = inject(ApiService);
+
+  @Input() arbolId: string | null = null;
 
   allPersons: Persona[] = [];
   allRelations: Relacion[] = [];
@@ -460,21 +485,36 @@ export class TreeContainerComponent implements OnInit {
     this.loadData();
   }
 
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['arbolId'] && !changes['arbolId'].firstChange) {
+      this.rootPerson = null;
+      this.loadData();
+    }
+  }
+
   loadData() {
     this.loading = true;
-    this.api.getPersonas().subscribe(personas => {
+    this.api.getPersonas(this.arbolId || undefined).subscribe(personas => {
       this.allPersons = personas;
       this.api.getRelaciones().subscribe(relaciones => {
         this.allRelations = relaciones;
 
-        if (!this.rootPerson && this.allPersons.length > 0) {
-          this.rootPerson = this.allPersons[0];
-        }
+        if (this.allPersons.length === 0) {
+          this.rootPerson = null;
+          this.grandparents = [];
+          this.parents = [];
+          this.partners = [];
+          this.children = [];
+        } else {
+          if (!this.rootPerson || !this.allPersons.some(p => p.id === this.rootPerson?.id)) {
+            this.rootPerson = this.allPersons[0];
+          }
 
-        if (this.rootPerson) {
-          const updatedRoot = this.allPersons.find(p => p.id === this.rootPerson?.id);
-          if (updatedRoot) this.rootPerson = updatedRoot;
-          this.calculateTree(this.rootPerson);
+          if (this.rootPerson) {
+            const updatedRoot = this.allPersons.find(p => p.id === this.rootPerson?.id);
+            if (updatedRoot) this.rootPerson = updatedRoot;
+            this.calculateTree(this.rootPerson);
+          }
         }
         this.loading = false;
       });
@@ -578,6 +618,12 @@ export class TreeContainerComponent implements OnInit {
     this.isEditPersonDialogOpen = true;
   }
 
+  openAddFirstPerson() {
+    this.dialogTargetPerson = null;
+    this.dialogRelativeType = 'PADRE';
+    this.isDialogOpen = true;
+  }
+
   openAddRelative(person: Persona, type: 'PADRE' | 'PAREJA' | 'HIJO') {
     this.dialogTargetPerson = person;
     this.dialogRelativeType = type;
@@ -585,16 +631,27 @@ export class TreeContainerComponent implements OnInit {
   }
 
   onRelativeSaved(event: {personaData: PersonaCreate, relativeType: 'PADRE' | 'PAREJA' | 'HIJO', fechaMatrimonio?: string}) {
-    if (!this.dialogTargetPerson) return;
-
-    // Capture target now (before async)
-    const targetPerson = this.dialogTargetPerson;
-
     const payload = { ...event.personaData };
+    if (this.arbolId) {
+      payload.arbol_id = this.arbolId;
+    }
     if (!payload.fecha_nacimiento) delete payload.fecha_nacimiento;
     if (!payload.fecha_muerte) delete payload.fecha_muerte;
     if (!payload.genero) delete payload.genero;
     if (!payload.lugar_nacimiento) delete payload.lugar_nacimiento;
+
+    // Si no hay targetPerson, estamos agregando la primera persona del árbol
+    if (!this.dialogTargetPerson) {
+      this.api.createPersona(payload).subscribe(newPerson => {
+        this.isDialogOpen = false;
+        this.rootPerson = newPerson;
+        this.showToast('✓ Persona inicial agregada');
+        this.loadData();
+      });
+      return;
+    }
+
+    const targetPerson = this.dialogTargetPerson;
 
     this.api.createPersona(payload).subscribe(newPerson => {
       let relationPayload: any = {
