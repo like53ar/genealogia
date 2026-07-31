@@ -4,6 +4,21 @@ from uuid import UUID
 from datetime import date
 from .models import TipoRelacion
 
+# ── Árbol schemas ────────────────────────────────────────
+class ArbolCreate(BaseModel):
+    nombre: str
+    descripcion: Optional[str] = None
+
+class ArbolOut(BaseModel):
+    id: UUID
+    nombre: str
+    descripcion: Optional[str] = None
+    fecha_creacion: Optional[date] = None
+
+    class Config:
+        from_attributes = True
+
+
 class LugarBase(BaseModel):
     nombre: str
     latitud: Optional[float] = None

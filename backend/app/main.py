@@ -28,7 +28,56 @@ def read_root():
     return {"message": "Welcome to the Genealogy Tree API"}
 
 
-# ── Schema simplificado para el formulario de nueva persona ──
+# ── Árboles endpoints ────────────────────────────────────
+
+@app.get("/arboles/", response_model=List[schemas.ArbolOut])
+def get_arboles(db: Session = Depends(database.get_db)):
+    """Devuelve todos los árboles genealógicos."""
+    return db.query(models.Arbol).order_by(models.Arbol.fecha_creacion.desc()).all()
+
+@app.get("/arboles/{arbol_id}", response_model=schemas.ArbolOut)
+def get_arbol(arbol_id: UUID, db: Session = Depends(database.get_db)):
+    """Devuelve un árbol por ID."""
+    arbol = db.query(models.Arbol).filter(models.Arbol.id == arbol_id).first()
+    if not arbol:
+        raise HTTPException(status_code=404, detail="Árbol no encontrado")
+    return arbol
+
+@app.post("/arboles/", response_model=schemas.ArbolOut, status_code=201)
+def create_arbol(arbol: schemas.ArbolCreate, db: Session = Depends(database.get_db)):
+    """Crea un nuevo árbol genealógico con nombre y descripción opcional."""
+    db_arbol = models.Arbol(
+        nombre=arbol.nombre,
+        descripcion=arbol.descripcion,
+    )
+    db.add(db_arbol)
+    db.commit()
+    db.refresh(db_arbol)
+    return db_arbol
+
+@app.put("/arboles/{arbol_id}", response_model=schemas.ArbolOut)
+def update_arbol(arbol_id: UUID, arbol: schemas.ArbolCreate, db: Session = Depends(database.get_db)):
+    """Actualiza el nombre/descripción de un árbol."""
+    db_arbol = db.query(models.Arbol).filter(models.Arbol.id == arbol_id).first()
+    if not db_arbol:
+        raise HTTPException(status_code=404, detail="Árbol no encontrado")
+    db_arbol.nombre = arbol.nombre
+    db_arbol.descripcion = arbol.descripcion
+    db.commit()
+    db.refresh(db_arbol)
+    return db_arbol
+
+@app.delete("/arboles/{arbol_id}")
+def delete_arbol(arbol_id: UUID, db: Session = Depends(database.get_db)):
+    """Elimina un árbol y en cascada todas sus personas y relaciones."""
+    db_arbol = db.query(models.Arbol).filter(models.Arbol.id == arbol_id).first()
+    if not db_arbol:
+        raise HTTPException(status_code=404, detail="Árbol no encontrado")
+    db.delete(db_arbol)
+    db.commit()
+    return {"message": f"Árbol '{db_arbol.nombre}' eliminado exitosamente"}
+
+
 class PersonaSimpleCreate(BaseModel):
     nombre: str
     apellido: str
