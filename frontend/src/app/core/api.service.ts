@@ -2,6 +2,20 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+// ── Interfaces Árbol ──────────────────────────────────
+export interface Arbol {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  fecha_creacion?: string;
+}
+
+export interface ArbolCreate {
+  nombre: string;
+  descripcion?: string;
+}
+
+// ── Interfaces Persona ────────────────────────────────
 export interface Persona {
   id: string;
   nombre: string;
@@ -45,9 +59,30 @@ export interface RelacionCreate {
 })
 export class ApiService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8000'; // Default FastAPI url
+  private apiUrl = 'http://localhost:8000';
 
-  // Personas
+  // ── Árboles ──────────────────────────────────────────
+  getArboles(): Observable<Arbol[]> {
+    return this.http.get<Arbol[]>(`${this.apiUrl}/arboles/`);
+  }
+
+  getArbol(id: string): Observable<Arbol> {
+    return this.http.get<Arbol>(`${this.apiUrl}/arboles/${id}`);
+  }
+
+  createArbol(arbol: ArbolCreate): Observable<Arbol> {
+    return this.http.post<Arbol>(`${this.apiUrl}/arboles/`, arbol);
+  }
+
+  updateArbol(id: string, arbol: ArbolCreate): Observable<Arbol> {
+    return this.http.put<Arbol>(`${this.apiUrl}/arboles/${id}`, arbol);
+  }
+
+  deleteArbol(id: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/arboles/${id}`);
+  }
+
+  // ── Personas ──────────────────────────────────────────
   getPersonas(): Observable<Persona[]> {
     return this.http.get<Persona[]>(`${this.apiUrl}/personas/`);
   }
@@ -64,7 +99,7 @@ export class ApiService {
     return this.http.delete(`${this.apiUrl}/personas/${id}`);
   }
 
-  // Relaciones
+  // ── Relaciones ────────────────────────────────────────
   getRelaciones(): Observable<Relacion[]> {
     return this.http.get<Relacion[]>(`${this.apiUrl}/relaciones/`);
   }
@@ -73,7 +108,7 @@ export class ApiService {
     return this.http.post<Relacion>(`${this.apiUrl}/relaciones/`, relacion);
   }
 
-  // Parentesco
+  // ── Parentesco ────────────────────────────────────────
   getParentesco(personaAId: string, personaBId: string): Observable<{relacion: string}> {
     return this.http.get<{relacion: string}>(`${this.apiUrl}/parentesco/?persona_a_id=${personaAId}&persona_b_id=${personaBId}`);
   }
