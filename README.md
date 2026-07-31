@@ -197,13 +197,17 @@ El sistema utiliza una paleta **zen** coherente en todos los elementos:
 - [x] Vincular personas al árbol activo al momento de la carga y creación
 - [x] Botón "Editar Árbol" → selección de árboles existentes
 - [x] Botón "Borrar Árbol" → eliminación real vía API REST con borrado en cascada
+- [x] Visualización jerárquica del árbol (Abuelos, Padres, Raíz + Pareja con fecha de matrimonio, Hijos)
+- [x] Nodos contextuales inteligentes (`parentCount`): botón `+ Padres` / `+ Padre/Madre` visible solo si la persona tiene menos de 2 padres
+- [x] Inferencia de parentesco con NetworkX en backend extendida a 4ª generación (Tatarabuelos, Tataranietos) y ancestros/descendientes ordinales
+- [x] Diálogos interconectados para añadir familiares, editar datos de personas, navegar el árbol y borrar integrantes
 
 ### 🔮 Próximos pasos
-- [ ] Visualización gráfica del árbol con nodos y conexiones
 - [ ] Mapa de lugares de nacimiento/fallecimiento (Leaflet)
 - [ ] Carga de fotos por persona
 - [ ] Exportar árbol a PDF o imagen
 - [ ] Buscador de personas dentro del árbol
+- [ ] Timeline / Línea de tiempo de eventos familiares
 
 ---
 
