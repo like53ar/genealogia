@@ -26,21 +26,50 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
       <div *ngIf="!loading && rootPerson" class="tree-layout">
 
         <!-- ── GRANDPARENTS ROW ─────────────────────────────── -->
-        <div class="tree-row grandparents-row" *ngIf="grandparents.length > 0">
-          <div *ngFor="let gp of grandparents" class="grandparent-unit">
-            <app-person-node
-              [person]="gp"
-              [role]="'ancestor'"
-              [kinshipLabel]="kinshipLabels.get(gp.id) || ''"
-              [parentCount]="getParentCount(gp)"
-              (nodeClick)="onPersonNodeClick(gp)"
-              (addAction)="openAddRelative(gp, $event.type)"
-            ></app-person-node>
-          </div>
+        <div class="tree-row grandparents-row" *ngIf="grandparentCouples.length > 0">
+          <ng-container *ngFor="let couple of grandparentCouples; let ci = index">
+            <!-- Separator between couples -->
+            <div class="couple-separator" *ngIf="ci > 0"></div>
+            <div class="grandparent-couple">
+              <!-- First grandparent -->
+              <div class="grandparent-unit">
+                <app-person-node
+                  [person]="couple.gp"
+                  [role]="'ancestor'"
+                  [kinshipLabel]="kinshipLabels.get(couple.gp.id) || ''"
+                  [parentCount]="getParentCount(couple.gp)"
+                  (nodeClick)="onPersonNodeClick(couple.gp)"
+                  (addAction)="openAddRelative(couple.gp, $event.type)"
+                ></app-person-node>
+              </div>
+              <!-- Connector + Partner -->
+              <ng-container *ngIf="couple.partner">
+                <div class="couple-connector-wrap">
+                  <div class="couple-connector-inner">
+                    <div class="wedding-badge" *ngIf="couple.weddingYear">
+                      <span class="wedding-icon">&#x1F48D;</span>
+                      <span class="wedding-year">{{ couple.weddingYear }}</span>
+                    </div>
+                    <div class="h-connector couple-h-line"></div>
+                  </div>
+                </div>
+                <div class="grandparent-unit">
+                  <app-person-node
+                    [person]="couple.partner"
+                    [role]="'ancestor'"
+                    [kinshipLabel]="kinshipLabels.get(couple.partner.id) || ''"
+                    [parentCount]="getParentCount(couple.partner)"
+                    (nodeClick)="onPersonNodeClick(couple.partner)"
+                    (addAction)="openAddRelative(couple.partner, $event.type)"
+                  ></app-person-node>
+                </div>
+              </ng-container>
+            </div>
+          </ng-container>
         </div>
 
         <!-- Connector: grandparents → parents (vertical line from each grandparent to parent) -->
-        <div class="connector-row" *ngIf="grandparents.length > 0 && parents.length > 0">
+        <div class="connector-row" *ngIf="grandparentCouples.length > 0 && parents.length > 0">
           <div class="v-line" *ngFor="let _ of parents"></div>
         </div>
 
@@ -259,13 +288,24 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
     }
 
     .grandparents-row {
-      gap: 24px;
+      gap: 32px;
+    }
+
+    .grandparent-couple {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 0;
     }
 
     .grandparent-unit {
       display: flex;
       flex-direction: column;
       align-items: center;
+    }
+
+    .couple-separator {
+      width: 24px;
     }
 
     .parents-row {
@@ -466,6 +506,7 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   rootPerson: Persona | null = null;
 
   grandparents: Persona[] = [];
+  grandparentCouples: { gp: Persona, partner: Persona | null, weddingYear: string | null }[] = [];
   parents: Persona[] = [];
   partners: Persona[] = [];
   children: Persona[] = [];
@@ -508,6 +549,7 @@ export class TreeContainerComponent implements OnInit, OnChanges {
         if (this.allPersons.length === 0) {
           this.rootPerson = null;
           this.grandparents = [];
+          this.grandparentCouples = [];
           this.parents = [];
           this.partners = [];
           this.children = [];
@@ -546,7 +588,47 @@ export class TreeContainerComponent implements OnInit, OnChanges {
         .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === parent.id)
         .forEach(r => grandparentIds.add(r.persona_1_id));
     });
-    this.grandparents = this.allPersons.filter(p => grandparentIds.has(p.id));
+    const directGrandparents = this.allPersons.filter(p => grandparentIds.has(p.id));
+
+    // Include partners of grandparents (e.g., grandmother who doesn't have direct PADRE_HIJO relation)
+    const allGpIds = new Set<string>(grandparentIds);
+    const gpPartnerMap = new Map<string, { partner: Persona, relation: Relacion }>();
+    directGrandparents.forEach(gp => {
+      const partnerRel = this.allRelations.find(
+        r => r.tipo_relacion === 'PAREJA' &&
+          (r.persona_1_id === gp.id || r.persona_2_id === gp.id)
+      );
+      if (partnerRel) {
+        const partnerId = partnerRel.persona_1_id === gp.id ? partnerRel.persona_2_id : partnerRel.persona_1_id;
+        const partnerPerson = this.allPersons.find(p => p.id === partnerId);
+        if (partnerPerson) {
+          gpPartnerMap.set(gp.id, { partner: partnerPerson, relation: partnerRel });
+          allGpIds.add(partnerId);
+        }
+      }
+    });
+    this.grandparents = this.allPersons.filter(p => allGpIds.has(p.id));
+
+    // Build grandparent couples for display
+    const processedGpIds = new Set<string>();
+    this.grandparentCouples = [];
+    directGrandparents.forEach(gp => {
+      if (processedGpIds.has(gp.id)) return;
+      processedGpIds.add(gp.id);
+      const partnerInfo = gpPartnerMap.get(gp.id);
+      let weddingYear: string | null = null;
+      if (partnerInfo?.relation?.fecha_inicio) {
+        try {
+          weddingYear = new Date(partnerInfo.relation.fecha_inicio + 'T00:00:00').getFullYear().toString();
+        } catch { weddingYear = null; }
+      }
+      if (partnerInfo) {
+        processedGpIds.add(partnerInfo.partner.id);
+        this.grandparentCouples.push({ gp, partner: partnerInfo.partner, weddingYear });
+      } else {
+        this.grandparentCouples.push({ gp, partner: null, weddingYear: null });
+      }
+    });
 
     // Children
     const childIds = this.allRelations
