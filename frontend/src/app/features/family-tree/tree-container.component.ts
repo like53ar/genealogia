@@ -155,7 +155,9 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
 
 
         <!-- Connector: couple center → children -->
-        <div class="connector-to-children" *ngIf="children.length > 0">
+        <!-- When a partner exists, center the line on the couple-h-line midpoint -->
+        <div class="connector-to-children" *ngIf="children.length > 0"
+          [class.with-partner]="partners.length > 0">
           <div class="v-line-center"></div>
         </div>
 
@@ -216,6 +218,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
       [isOpen]="isDialogOpen"
       [targetPerson]="dialogTargetPerson"
       [relativeType]="dialogRelativeType"
+      [availablePartners]="dialogPartners"
       (closed)="isDialogOpen = false"
       (saved)="onRelativeSaved($event)">
     </app-add-relative-dialog>
@@ -429,6 +432,18 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
       display: flex;
       justify-content: center;
       margin-top: 0;
+      /* Default: centered over root node */
+      position: relative;
+    }
+
+    /*
+     * When a partner is present, shift the connector rightward so it aligns
+     * with the center of the horizontal couple-h-line (root_width/2 + h-line/2).
+     * root card ≈ 160px wide, couple-h-line = 60px → shift = 80px + 30px = 110px
+     */
+    .connector-to-children.with-partner {
+      justify-content: flex-start;
+      transform: translateX(110px);
     }
 
     /* Short vertical from horizontal bar to child */
@@ -523,6 +538,7 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   isDialogOpen = false;
   dialogTargetPerson: Persona | null = null;
   dialogRelativeType: 'PADRE' | 'PAREJA' | 'HIJO' = 'PADRE';
+  dialogPartners: Persona[] = [];
 
   // Edit dialog state
   isEditPersonDialogOpen = false;
@@ -722,10 +738,25 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   openAddRelative(person: Persona, type: 'PADRE' | 'PAREJA' | 'HIJO') {
     this.dialogTargetPerson = person;
     this.dialogRelativeType = type;
+    // When adding a child, expose available partners as potential other parent
+    if (type === 'HIJO') {
+      this.dialogPartners = this.getPartnersOf(person);
+    } else {
+      this.dialogPartners = [];
+    }
     this.isDialogOpen = true;
   }
 
-  onRelativeSaved(event: {personaData: PersonaCreate, relativeType: 'PADRE' | 'PAREJA' | 'HIJO', fechaMatrimonio?: string}) {
+  /** Returns the list of partners (PAREJA relations) for a given person */
+  getPartnersOf(person: Persona): Persona[] {
+    const partnerIds = this.allRelations
+      .filter(r => r.tipo_relacion === 'PAREJA' &&
+        (r.persona_1_id === person.id || r.persona_2_id === person.id))
+      .map(r => r.persona_1_id === person.id ? r.persona_2_id : r.persona_1_id);
+    return this.allPersons.filter(p => partnerIds.includes(p.id));
+  }
+
+  onRelativeSaved(event: {personaData: PersonaCreate, relativeType: 'PADRE' | 'PAREJA' | 'HIJO', fechaMatrimonio?: string, otherParentId?: string}) {
     const payload = { ...event.personaData };
     if (this.arbolId) {
       payload.arbol_id = this.arbolId;
@@ -767,15 +798,30 @@ export class TreeContainerComponent implements OnInit, OnChanges {
         }
       }
 
+      // Create the primary relation
       this.api.createRelacion(relationPayload).subscribe(() => {
-        this.isDialogOpen = false;
-        this.showToast(event.relativeType === 'PAREJA'
-          ? '✓ Pareja agregada'
-          : event.relativeType === 'HIJO'
-            ? '✓ Hijo/a agregado'
-            : '✓ Padre/Madre agregado'
-        );
-        this.loadData();
+        // If adding a child with a specified other parent, create the second PADRE_HIJO relation
+        if (event.relativeType === 'HIJO' && event.otherParentId) {
+          const secondRelation = {
+            tipo_relacion: 'PADRE_HIJO' as const,
+            persona_1_id: event.otherParentId,
+            persona_2_id: newPerson.id,
+          };
+          this.api.createRelacion(secondRelation).subscribe(() => {
+            this.isDialogOpen = false;
+            this.showToast('✓ Hijo/a agregado con ambos progenitores');
+            this.loadData();
+          });
+        } else {
+          this.isDialogOpen = false;
+          this.showToast(event.relativeType === 'PAREJA'
+            ? '✓ Pareja agregada'
+            : event.relativeType === 'HIJO'
+              ? '✓ Hijo/a agregado'
+              : '✓ Padre/Madre agregado'
+          );
+          this.loadData();
+        }
       });
     });
   }

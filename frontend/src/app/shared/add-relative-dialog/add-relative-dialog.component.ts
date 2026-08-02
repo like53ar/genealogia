@@ -87,6 +87,29 @@ import { Persona, PersonaCreate, ApiService } from '../../core/api.service';
             />
           </div>
 
+          <!-- Selector de otro progenitor — solo para HIJO y cuando hay parejas disponibles -->
+          <div *ngIf="relativeType === 'HIJO' && availablePartners.length > 0" class="other-parent-field">
+            <label class="block text-xs font-medium mb-1 ml-1" style="color: #5a7a8a;">
+              👩‍👦 Madre / Otro progenitor
+            </label>
+            <select
+              [(ngModel)]="selectedOtherParentId"
+              name="otherParentId"
+              class="input-zen bg-white"
+              style="border-color: #9ab8c4;"
+            >
+              <option value="">— Sin especificar —</option>
+              <option *ngFor="let partner of availablePartners" [value]="partner.id">
+                {{ partner.nombre }} {{ partner.apellido }}
+                <ng-container *ngIf="partner.genero === 'M'"> (Padre)</ng-container>
+                <ng-container *ngIf="partner.genero === 'F'"> (Madre)</ng-container>
+              </option>
+            </select>
+            <p class="text-xs mt-1 ml-1" style="color: #8a9ea8;">
+              La línea del árbol saldrá del centro de la unión de la pareja.
+            </p>
+          </div>
+
           <div class="pt-4 flex gap-3">
             <button type="button" (click)="close()" class="flex-1 btn-zen-secondary py-2">Cancelar</button>
             <button type="submit" [disabled]="!form.valid || loading" class="flex-1 btn-zen py-2">
@@ -108,18 +131,26 @@ import { Persona, PersonaCreate, ApiService } from '../../core/api.service';
       border-radius: 12px;
       padding: 12px;
     }
+    .other-parent-field {
+      background: #F0F6F8;
+      border: 1px solid #C0D8E0;
+      border-radius: 12px;
+      padding: 12px;
+    }
   `]
 })
 export class AddRelativeDialogComponent {
   @Input() isOpen = false;
   @Input() targetPerson: Persona | null = null;
   @Input() relativeType: 'PADRE' | 'PAREJA' | 'HIJO' = 'PADRE';
+  @Input() availablePartners: Persona[] = [];
   
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<{
     personaData: PersonaCreate;
     relativeType: 'PADRE' | 'PAREJA' | 'HIJO';
     fechaMatrimonio?: string;
+    otherParentId?: string;
   }>();
 
   persona: PersonaCreate = { nombre: '', apellido: '', genero: '', fecha_nacimiento: '', fecha_muerte: '', lugar_nacimiento: '', notas: '' };
@@ -127,6 +158,7 @@ export class AddRelativeDialogComponent {
   distrito = '';
   pais = '';
   fechaMatrimonio = '';
+  selectedOtherParentId = '';
   loading = false;
 
   getRelativeTypeName() {
@@ -154,6 +186,7 @@ export class AddRelativeDialogComponent {
         personaData: { ...this.persona },
         relativeType: this.relativeType,
         fechaMatrimonio: this.fechaMatrimonio || undefined,
+        otherParentId: this.selectedOtherParentId || undefined,
       });
     }
   }
@@ -164,6 +197,7 @@ export class AddRelativeDialogComponent {
     this.distrito = '';
     this.pais = '';
     this.fechaMatrimonio = '';
+    this.selectedOtherParentId = '';
     this.loading = false;
   }
 }

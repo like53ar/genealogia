@@ -138,8 +138,8 @@
   text-transform: uppercase;
   color: #3b3a36;
   background: rgba(255, 255, 255, 0.48);
-  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border: 1px solid rgba(138, 154, 106, 0.45);
   border-radius: 14px;
   cursor: pointer;
