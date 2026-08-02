@@ -166,7 +166,7 @@ npm install --legacy-peer-deps
 npm start
 ```
 
-El frontend queda disponible en `http://localhost:4200` y se abre automáticamente en el navegador.
+El frontend queda disponible en `http://localhost:4600` y se abre automáticamente en el navegador.
 
 ---
 
