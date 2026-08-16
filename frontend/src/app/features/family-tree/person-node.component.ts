@@ -99,13 +99,13 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner' | 's
       border-radius: 11px;
       border-width: 1.5px;
       border-style: solid;
-      box-shadow: 0 2px 10px -2px rgba(0,0,0,0.06);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.2);
       gap: 2px;
     }
 
     .node-card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 16px -3px rgba(0,0,0,0.1);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
     }
 
     /* Root node: larger and with double border effect */
@@ -114,7 +114,7 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner' | 's
       padding: 12px 8px 8px;
       border-radius: 14px;
       border-width: 2px;
-      box-shadow: 0 0 0 3px rgba(143,164,145,0.2), 0 4px 14px -2px rgba(0,0,0,0.09);
+      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.55), 0 8px 28px rgba(0,0,0,0.45);
     }
 
     /* Top accent bar for root */

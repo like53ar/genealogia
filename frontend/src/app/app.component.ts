@@ -12,10 +12,10 @@ type Vista = 'home' | 'tree';
   imports: [CommonModule, FormsModule, TreeContainerComponent],
   template: `
     <main class="w-full min-h-screen font-zen overflow-hidden relative"
-          style="background-image: url('zen-bg.png'); background-size: cover; background-position: center; background-attachment: fixed; min-height: 100vh;">
+          style="background-image: radial-gradient(circle at 50% 30%, rgba(35, 24, 15, 0.42) 0%, rgba(16, 11, 7, 0.88) 100%), url('vintage-bg.jpg'); background-size: cover; background-position: center; background-attachment: fixed; min-height: 100vh;">
       
-      <!-- Background overlay -->
-      <div style="position: absolute; inset: 0; background: rgba(240,238,232,0.12); z-index: 0;"></div>
+      <!-- Background subtle lighting overlay -->
+      <div style="position: absolute; inset: 0; background: rgba(18, 12, 7, 0.15); pointer-events: none; z-index: 0;"></div>
 
       <!-- ═══════════ PANTALLA DE INICIO ═══════════ -->
       <div *ngIf="vista === 'home'"
@@ -37,35 +37,36 @@ type Vista = 'home' | 'tree';
             font-size: clamp(2rem, 5.5vw, 4.2rem);
             font-weight: 700;
             letter-spacing: 0.22em;
-            color: #3b3a36;
-            text-shadow: 0 2px 24px rgba(255,255,255,0.92), 0 1px 4px rgba(120,110,90,0.18);
+            color: #F8ECD5;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.8), 0 0 35px rgba(212, 175, 55, 0.25);
             margin: 0;
             padding: 0.55em 1.6em;
-            background: rgba(255,255,255,0.48);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            background: rgba(28, 19, 12, 0.78);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.7);
+            border: 1px solid rgba(212, 175, 120, 0.45);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
             text-transform: uppercase;
             white-space: nowrap;
             text-align: center;
           ">ÁRBOL GENEALÓGICO</h1>
           
-          <div style="height: 3px; width: 160px; background: linear-gradient(90deg, transparent, #8a9a6a, transparent); margin-top: 1.2rem; border-radius: 2px;"></div>
+          <div style="height: 3px; width: 160px; background: linear-gradient(90deg, transparent, #D4AF37, transparent); margin-top: 1.2rem; border-radius: 2px;"></div>
           
           <p style="
             margin-top: 0.9rem;
             font-family: 'Georgia', serif;
             font-size: 0.9rem;
-            color: #6b6a62;
+            color: #DFC090;
             letter-spacing: 0.2em;
             text-transform: uppercase;
-            background: rgba(255,255,255,0.35);
+            background: rgba(30, 20, 13, 0.65);
             padding: 0.35em 1.4em;
             border-radius: 999px;
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            border: 1px solid rgba(255,255,255,0.45);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border: 1px solid rgba(212, 175, 120, 0.35);
           ">Tu historia familiar</p>
         </div>
 
@@ -100,51 +101,46 @@ type Vista = 'home' | 'tree';
           </button>
         </div>
 
-        <!-- Ornamento decorativo -->
-        <div style="margin-top: 3rem; display: flex; align-items: center; gap: 0.8rem; opacity: 0.45;">
-          <div style="height: 1px; width: 55px; background: #8a9a6a;"></div>
-          <span style="font-family: 'Georgia', serif; color: #8a9a6a; font-size: 1.1rem;">❧</span>
-          <div style="height: 1px; width: 55px; background: #8a9a6a;"></div>
-        </div>
       </div>
 
-      <!-- ═══════════ VISTA DEL ÁRBOL ═══════════ -->
-      <div *ngIf="vista === 'tree'" style="position: relative; z-index: 10; min-height: 100vh;">
+      <!-- ═══════════ PANTALLA DEL ÁRBOL ═══════════ -->
+      <div *ngIf="vista === 'tree'" style="min-height: 100vh; position: relative; z-index: 10;">
         <header style="
-          position: fixed; top: 0; left: 0; right: 0; z-index: 30;
-          padding: 0.8rem 1.5rem;
+          position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+          background: rgba(28, 19, 12, 0.85);
+          backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+          border-bottom: 1px solid rgba(212, 175, 120, 0.35);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+          padding: 0.75rem 2rem;
           display: flex; align-items: center; justify-content: space-between;
-          background: rgba(255,255,255,0.38);
-          backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-          border-bottom: 1px solid rgba(255,255,255,0.55);
         ">
           <div style="display: flex; flex-direction: column;">
-            <h1 style="font-family: 'Georgia', serif; font-size: 1.2rem; font-weight: 700; letter-spacing: 0.18em; color: #3b3a36; margin: 0; text-transform: uppercase;">
+            <h1 style="font-family: 'Georgia', serif; font-size: 1.2rem; font-weight: 700; letter-spacing: 0.18em; color: #F8ECD5; margin: 0; text-transform: uppercase;">
               ÁRBOL GENEALÓGICO
             </h1>
-            <span *ngIf="arbolActivo" style="font-family: 'Georgia', serif; font-size: 0.78rem; color: #7a7368; letter-spacing: 0.1em; margin-top: 0.1rem;">
+            <span *ngIf="arbolActivo" style="font-family: 'Georgia', serif; font-size: 0.78rem; color: #DFC090; letter-spacing: 0.1em; margin-top: 0.1rem;">
               {{ arbolActivo.nombre }}
             </span>
           </div>
           <div style="display: flex; align-items: center; gap: 0.8rem;">
             <button (click)="abrirModalSeleccionarArbol()" style="
               font-family: 'Georgia', serif; font-size: 0.78rem; letter-spacing: 0.12em;
-              text-transform: uppercase; color: #6b6a62;
-              background: rgba(255,255,255,0.45); border: 1px solid rgba(139,130,110,0.3);
+              text-transform: uppercase; color: #F8ECD5;
+              background: rgba(240, 220, 190, 0.15); border: 1px solid rgba(212, 175, 120, 0.45);
               padding: 0.4em 1.2em; border-radius: 999px; cursor: pointer; transition: all 0.2s;
             "
-            onmouseover="this.style.background='rgba(255,255,255,0.7)'"
-            onmouseout="this.style.background='rgba(255,255,255,0.45)'">
+            onmouseover="this.style.background='rgba(240, 220, 190, 0.28)'"
+            onmouseout="this.style.background='rgba(240, 220, 190, 0.15)'">
               Cambiar Árbol
             </button>
             <button (click)="volverInicio()" id="btn-volver-inicio" style="
               font-family: 'Georgia', serif; font-size: 0.78rem; letter-spacing: 0.12em;
-              text-transform: uppercase; color: #6b6a62;
-              background: rgba(255,255,255,0.45); border: 1px solid rgba(139,130,110,0.3);
+              text-transform: uppercase; color: #F8ECD5;
+              background: rgba(240, 220, 190, 0.15); border: 1px solid rgba(212, 175, 120, 0.45);
               padding: 0.4em 1.2em; border-radius: 999px; cursor: pointer; transition: all 0.2s;
             "
-            onmouseover="this.style.background='rgba(255,255,255,0.7)'"
-            onmouseout="this.style.background='rgba(255,255,255,0.45)'">
+            onmouseover="this.style.background='rgba(240, 220, 190, 0.28)'"
+            onmouseout="this.style.background='rgba(240, 220, 190, 0.15)'">
               ← Inicio
             </button>
           </div>
