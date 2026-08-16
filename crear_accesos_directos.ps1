@@ -1,5 +1,5 @@
 $DesktopPath = [Environment]::GetFolderPath('Desktop')
-$ProjectDir = "C:\Users\fabar\OneDrive\Escritorio\Genealogia"
+$ProjectDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Definition }
 
 $NameStart = [char]0xC1 + "rbol Geneal" + [char]0xF3 + "gico.lnk"
 $NameStop = "Detener " + [char]0xC1 + "rbol Geneal" + [char]0xF3 + "gico.lnk"
