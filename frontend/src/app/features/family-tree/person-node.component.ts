@@ -60,6 +60,14 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
           💑 Pareja
         </button>
 
+        <!-- Button Hermano/a: for all nodes -->
+        <button
+          (click)="addAction.emit({person: person, type: 'HERMANO', subType: 'HERMANO'}); $event.stopPropagation()"
+          class="action-btn action-btn-hermano"
+          title="Añadir Hermano/a">
+          👫 Hermano/a
+        </button>
+
         <!-- Button Hijo/a: for all roles except ancestor -->
         <button *ngIf="role !== 'ancestor'"
           (click)="addAction.emit({person: person, type: 'HIJO', subType: 'HIJO'}); $event.stopPropagation()"
@@ -249,6 +257,16 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
       color: #7A4F20;
     }
 
+    .action-btn-hermano {
+      border-color: #D8C3A5;
+      color: #7A5528;
+    }
+    .action-btn-hermano:hover {
+      background: #FDF7F0;
+      border-color: #BA8E58;
+      color: #5C3A10;
+    }
+
     .action-btn-hijo {
       border-color: #A8C4A2;
       color: #3D6B40;
@@ -316,7 +334,7 @@ export class PersonNodeComponent {
   @Input() parentCount = 0;
 
   @Output() nodeClick = new EventEmitter<Persona>();
-  @Output() addAction = new EventEmitter<{person: Persona, type: 'PADRE' | 'PAREJA' | 'HIJO', subType: string}>();
+  @Output() addAction = new EventEmitter<{person: Persona, type: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO', subType: string}>();
 
   getCardClass(): string {
     return `node-card card-${this.role}`;

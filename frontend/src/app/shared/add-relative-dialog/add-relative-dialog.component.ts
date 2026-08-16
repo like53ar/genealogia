@@ -1,7 +1,7 @@
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Persona, PersonaCreate, ApiService } from '../../core/api.service';
+import { Persona, PersonaCreate } from '../../core/api.service';
 
 @Component({
   selector: 'app-add-relative-dialog',
@@ -87,6 +87,22 @@ import { Persona, PersonaCreate, ApiService } from '../../core/api.service';
             />
           </div>
 
+          <!-- Mensaje contextual para HERMANO -->
+          <div *ngIf="relativeType === 'HERMANO'" class="sibling-field">
+            <label class="block text-xs font-medium mb-1 ml-1" style="color: #7A5528;">
+              👫 Vínculo de hermandad
+            </label>
+            <p class="text-xs ml-1" style="color: #6E4215;" *ngIf="targetParents.length > 0">
+              Se registrará compartiendo los padres de <strong>{{ targetPerson?.nombre }}</strong>:
+              <span *ngFor="let p of targetParents; let isLast = last">
+                {{ p.nombre }} {{ p.apellido }}{{ isLast ? '' : ', ' }}
+              </span>.
+            </p>
+            <p class="text-xs ml-1" style="color: #7A5528;" *ngIf="targetParents.length === 0">
+              Como <strong>{{ targetPerson?.nombre }}</strong> aún no tiene padres registrados, se creará un progenitor común para asociar a ambos hermanos.
+            </p>
+          </div>
+
           <!-- Selector de otro progenitor — solo para HIJO y cuando hay parejas disponibles -->
           <div *ngIf="relativeType === 'HIJO' && availablePartners.length > 0" class="other-parent-field">
             <label class="block text-xs font-medium mb-1 ml-1" style="color: #5a7a8a;">
@@ -131,6 +147,12 @@ import { Persona, PersonaCreate, ApiService } from '../../core/api.service';
       border-radius: 12px;
       padding: 12px;
     }
+    .sibling-field {
+      background: #FDF7F0;
+      border: 1px solid #E6D2BC;
+      border-radius: 12px;
+      padding: 12px;
+    }
     .other-parent-field {
       background: #F0F6F8;
       border: 1px solid #C0D8E0;
@@ -142,13 +164,14 @@ import { Persona, PersonaCreate, ApiService } from '../../core/api.service';
 export class AddRelativeDialogComponent {
   @Input() isOpen = false;
   @Input() targetPerson: Persona | null = null;
-  @Input() relativeType: 'PADRE' | 'PAREJA' | 'HIJO' = 'PADRE';
+  @Input() relativeType: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO' = 'PADRE';
   @Input() availablePartners: Persona[] = [];
+  @Input() targetParents: Persona[] = [];
   
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<{
     personaData: PersonaCreate;
-    relativeType: 'PADRE' | 'PAREJA' | 'HIJO';
+    relativeType: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO';
     fechaMatrimonio?: string;
     otherParentId?: string;
   }>();
@@ -166,6 +189,7 @@ export class AddRelativeDialogComponent {
       case 'PADRE': return 'padre o madre';
       case 'PAREJA': return 'una pareja';
       case 'HIJO': return 'un hijo/a';
+      case 'HERMANO': return 'un hermano/a';
       default: return 'un familiar';
     }
   }
@@ -178,7 +202,7 @@ export class AddRelativeDialogComponent {
 
   onSubmit() {
     if (this.persona.nombre && this.persona.apellido && !this.loading) {
-      this.loading = true;  // bloquea el botón de inmediato
+      this.loading = true;
       const ubicacion = [this.ciudad, this.distrito, this.pais].filter(x => x).join(', ');
       this.persona.lugar_nacimiento = ubicacion;
       
