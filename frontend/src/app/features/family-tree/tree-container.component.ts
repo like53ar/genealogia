@@ -25,6 +25,51 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
       <!-- Tree Layout -->
       <div *ngIf="!loading && rootPerson" class="tree-layout">
 
+        <!-- ── BISABUELOS ROW ─────────────────────────────── -->
+        <div class="tree-row grandparents-row bisabuelos-row" *ngIf="bisabueloCouples.length > 0">
+          <ng-container *ngFor="let couple of bisabueloCouples; let ci = index">
+            <div class="couple-separator" *ngIf="ci > 0"></div>
+            <div class="grandparent-couple">
+              <div class="grandparent-unit">
+                <app-person-node
+                  [person]="couple.gp"
+                  [role]="'ancestor'"
+                  [kinshipLabel]="kinshipLabels.get(couple.gp.id) || ''"
+                  [parentCount]="getParentCount(couple.gp)"
+                  (nodeClick)="onPersonNodeClick(couple.gp)"
+                  (addAction)="openAddRelative(couple.gp, $event.type)"
+                ></app-person-node>
+              </div>
+              <ng-container *ngIf="couple.partner">
+                <div class="couple-connector-wrap">
+                  <div class="couple-connector-inner">
+                    <div class="wedding-badge" *ngIf="couple.weddingYear">
+                      <span class="wedding-icon">&#x1F48D;</span>
+                      <span class="wedding-year">{{ couple.weddingYear }}</span>
+                    </div>
+                    <div class="h-connector couple-h-line"></div>
+                  </div>
+                </div>
+                <div class="grandparent-unit">
+                  <app-person-node
+                    [person]="couple.partner"
+                    [role]="'ancestor'"
+                    [kinshipLabel]="kinshipLabels.get(couple.partner.id) || ''"
+                    [parentCount]="getParentCount(couple.partner)"
+                    (nodeClick)="onPersonNodeClick(couple.partner)"
+                    (addAction)="openAddRelative(couple.partner, $event.type)"
+                  ></app-person-node>
+                </div>
+              </ng-container>
+            </div>
+          </ng-container>
+        </div>
+
+        <!-- Connector: bisabuelos → grandparents -->
+        <div class="connector-row" *ngIf="bisabueloCouples.length > 0 && grandparentCouples.length > 0">
+          <div class="v-line" *ngFor="let _ of grandparentCouples"></div>
+        </div>
+
         <!-- ── GRANDPARENTS ROW ─────────────────────────────── -->
         <div class="tree-row grandparents-row" *ngIf="grandparentCouples.length > 0">
           <ng-container *ngFor="let couple of grandparentCouples; let ci = index">
@@ -226,6 +271,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
     <app-edit-person-dialog
       [isOpen]="isEditPersonDialogOpen"
       [person]="editDialogTargetPerson"
+      [parents]="editDialogParents"
       (closed)="isEditPersonDialogOpen = false"
       (saved)="onPersonEdited($event)"
       (deleted)="onPersonDeleted($event)"
@@ -291,7 +337,11 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
     }
 
     .grandparents-row {
-      gap: 32px;
+      gap: 48px;
+    }
+
+    .bisabuelos-row {
+      gap: 64px;
     }
 
     .grandparent-couple {
@@ -308,7 +358,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
     }
 
     .couple-separator {
-      width: 24px;
+      width: 32px;
     }
 
     .parents-row {
@@ -355,7 +405,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
     }
 
     .parents-connector {
-      width: 80px;
+      width: 60px;
     }
 
 
@@ -397,7 +447,7 @@ import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-
     }
 
     .couple-h-line {
-      width: 60px;
+      width: 56px;
     }
 
     /* Generic vertical line strip */
@@ -522,6 +572,8 @@ export class TreeContainerComponent implements OnInit, OnChanges {
 
   grandparents: Persona[] = [];
   grandparentCouples: { gp: Persona, partner: Persona | null, weddingYear: string | null }[] = [];
+  bisabuelos: Persona[] = [];
+  bisabueloCouples: { gp: Persona, partner: Persona | null, weddingYear: string | null }[] = [];
   parents: Persona[] = [];
   partners: Persona[] = [];
   children: Persona[] = [];
@@ -543,6 +595,7 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   // Edit dialog state
   isEditPersonDialogOpen = false;
   editDialogTargetPerson: Persona | null = null;
+  editDialogParents: Persona[] = [];
 
   ngOnInit() {
     this.loadData();
@@ -597,6 +650,32 @@ export class TreeContainerComponent implements OnInit, OnChanges {
       .map(r => r.persona_1_id);
     this.parents = this.allPersons.filter(p => parentIds.includes(p.id));
 
+    // Enrich parents: si un padre tiene pareja (PAREJA) que no aparece ya como padre
+    // (por no tener PADRE_HIJO directo), agregarla igual para mostrar la pareja en la fila.
+    if (this.parents.length === 1) {
+      const singleParent = this.parents[0];
+      const partnerRel = this.allRelations.find(
+        r => r.tipo_relacion === 'PAREJA' &&
+          (r.persona_1_id === singleParent.id || r.persona_2_id === singleParent.id)
+      );
+      if (partnerRel) {
+        const partnerId = partnerRel.persona_1_id === singleParent.id
+          ? partnerRel.persona_2_id
+          : partnerRel.persona_1_id;
+        if (!this.parents.some(p => p.id === partnerId)) {
+          const partnerPerson = this.allPersons.find(p => p.id === partnerId);
+          if (partnerPerson) {
+            // Ordenar: M primero, F segundo (convención visual)
+            if (singleParent.genero === 'F') {
+              this.parents.unshift(partnerPerson);
+            } else {
+              this.parents.push(partnerPerson);
+            }
+          }
+        }
+      }
+    }
+
     // Grandparents: parents of each parent
     const grandparentIds = new Set<string>();
     this.parents.forEach(parent => {
@@ -646,6 +725,58 @@ export class TreeContainerComponent implements OnInit, OnChanges {
       }
     });
 
+    // ── Bisabuelos: parents of each grandparent (and their partners) ──
+    const bisabueloIds = new Set<string>();
+    const allGpPersons = [
+      ...directGrandparents,
+      ...Array.from(gpPartnerMap.values()).map(v => v.partner)
+    ];
+    allGpPersons.forEach(gp => {
+      this.allRelations
+        .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === gp.id)
+        .forEach(r => bisabueloIds.add(r.persona_1_id));
+    });
+    const directBisabuelos = this.allPersons.filter(p => bisabueloIds.has(p.id));
+
+    const allBisabueloIds = new Set<string>(bisabueloIds);
+    const bisabueloPartnerMap = new Map<string, { partner: Persona, relation: Relacion }>();
+    directBisabuelos.forEach(ba => {
+      const partnerRel = this.allRelations.find(
+        r => r.tipo_relacion === 'PAREJA' &&
+          (r.persona_1_id === ba.id || r.persona_2_id === ba.id)
+      );
+      if (partnerRel) {
+        const bPartnerId = partnerRel.persona_1_id === ba.id
+          ? partnerRel.persona_2_id : partnerRel.persona_1_id;
+        const bPartnerPerson = this.allPersons.find(p => p.id === bPartnerId);
+        if (bPartnerPerson) {
+          bisabueloPartnerMap.set(ba.id, { partner: bPartnerPerson, relation: partnerRel });
+          allBisabueloIds.add(bPartnerId);
+        }
+      }
+    });
+    this.bisabuelos = this.allPersons.filter(p => allBisabueloIds.has(p.id));
+
+    const processedBisabueloIds = new Set<string>();
+    this.bisabueloCouples = [];
+    directBisabuelos.forEach(ba => {
+      if (processedBisabueloIds.has(ba.id)) return;
+      processedBisabueloIds.add(ba.id);
+      const bPartnerInfo = bisabueloPartnerMap.get(ba.id);
+      let bWeddingYear: string | null = null;
+      if (bPartnerInfo?.relation?.fecha_inicio) {
+        try {
+          bWeddingYear = new Date(bPartnerInfo.relation.fecha_inicio + 'T00:00:00').getFullYear().toString();
+        } catch { bWeddingYear = null; }
+      }
+      if (bPartnerInfo) {
+        processedBisabueloIds.add(bPartnerInfo.partner.id);
+        this.bisabueloCouples.push({ gp: ba, partner: bPartnerInfo.partner, weddingYear: bWeddingYear });
+      } else {
+        this.bisabueloCouples.push({ gp: ba, partner: null, weddingYear: null });
+      }
+    });
+
     // Children
     const childIds = this.allRelations
       .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_1_id === center.id)
@@ -671,11 +802,10 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   /** Asigna automáticamente el grado de parentesco relativo a la raíz */
   computeKinship() {
     this.kinshipLabels.clear();
-
     const g = (p: Persona, f: string, m: string, n: string) =>
       p.genero === 'M' ? m : p.genero === 'F' ? f : n;
 
-    // Parejas
+    // Pareja del nodo raíz
     this.partners.forEach(p =>
       this.kinshipLabels.set(p.id, g(p, 'Esposa', 'Esposo', 'Pareja'))
     );
@@ -685,25 +815,83 @@ export class TreeContainerComponent implements OnInit, OnChanges {
       this.kinshipLabels.set(p.id, g(p, 'Madre', 'Padre', 'Padre/Madre'))
     );
 
-    // Abuelos / Abuelas
-    this.grandparents.forEach(gp => {
-      // Determinar si es abuelo paterno o materno
-      const esPorPadre = this.parents.some(parent =>
-        this.allRelations.some(
-          r => r.tipo_relacion === 'PADRE_HIJO' &&
-               r.persona_1_id === gp.id &&
-               r.persona_2_id === parent.id
-        )
-      );
-      const lado = esPorPadre ? ' paterno' : ' materno';
-      this.kinshipLabels.set(gp.id, g(gp, 'Abuela' + lado, 'Abuelo' + lado, 'Abuelo/a' + lado));
-    });
-
     // Hijos / Hijas
     this.children.forEach(p =>
       this.kinshipLabels.set(p.id, g(p, 'Hija', 'Hijo', 'Hijo/a'))
     );
+
+    // Determinar padre/madre de la raíz según género
+    const father = this.parents.find(p => p.genero === 'M') ?? this.parents[0] ?? null;
+    const mother = this.parents.find(p => p.genero === 'F') ??
+      (this.parents.length > 1 ? this.parents[1] : null);
+
+    // sideMap: personId → 'paterno' | 'materno' | ''
+    const sideMap = new Map<string, string>();
+
+    // ── Abuelos: lado según si son padres del padre o de la madre ──
+    this.grandparents.forEach(gp => {
+      let lado = '';
+      if (father && this.allRelations.some(
+        r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_1_id === gp.id && r.persona_2_id === father.id
+      )) lado = 'paterno';
+      else if (mother && this.allRelations.some(
+        r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_1_id === gp.id && r.persona_2_id === mother.id
+      )) lado = 'materno';
+      sideMap.set(gp.id, lado);
+      const s = lado ? ` ${lado}` : '';
+      this.kinshipLabels.set(gp.id, g(gp, `Abuela${s}`, `Abuelo${s}`, `Abuelo/a${s}`));
+    });
+
+    // Propagar lado a parejas de abuelos (comparten el mismo lado)
+    this.grandparentCouples.forEach(couple => {
+      if (!couple.partner) return;
+      const gpSide    = sideMap.get(couple.gp.id)      ?? '';
+      const partSide  = sideMap.get(couple.partner.id) ?? '';
+      if (!partSide && gpSide) {
+        sideMap.set(couple.partner.id, gpSide);
+        const s = ` ${gpSide}`;
+        this.kinshipLabels.set(couple.partner.id,
+          g(couple.partner, `Abuela${s}`, `Abuelo${s}`, `Abuelo/a${s}`));
+      } else if (!gpSide && partSide) {
+        sideMap.set(couple.gp.id, partSide);
+        const s = ` ${partSide}`;
+        this.kinshipLabels.set(couple.gp.id,
+          g(couple.gp, `Abuela${s}`, `Abuelo${s}`, `Abuelo/a${s}`));
+      }
+    });
+
+    // ── Bisabuelos: lado según el abuelo/a del que son padres ──
+    this.bisabuelos.forEach(ba => {
+      const childRel = this.allRelations.find(
+        r => r.tipo_relacion === 'PADRE_HIJO' &&
+             r.persona_1_id === ba.id &&
+             sideMap.has(r.persona_2_id)
+      );
+      const lado = childRel ? (sideMap.get(childRel.persona_2_id) ?? '') : '';
+      sideMap.set(ba.id, lado);
+      const s = lado ? ` ${lado}` : '';
+      this.kinshipLabels.set(ba.id, g(ba, `Bisabuela${s}`, `Bisabuelo${s}`, `Bisabuelo/a${s}`));
+    });
+
+    // Propagar lado a parejas de bisabuelos
+    this.bisabueloCouples.forEach(couple => {
+      if (!couple.partner) return;
+      const baSide   = sideMap.get(couple.gp.id)      ?? '';
+      const partSide = sideMap.get(couple.partner.id) ?? '';
+      if (!partSide && baSide) {
+        sideMap.set(couple.partner.id, baSide);
+        const s = ` ${baSide}`;
+        this.kinshipLabels.set(couple.partner.id,
+          g(couple.partner, `Bisabuela${s}`, `Bisabuelo${s}`, `Bisabuelo/a${s}`));
+      } else if (!baSide && partSide) {
+        sideMap.set(couple.gp.id, partSide);
+        const s = ` ${partSide}`;
+        this.kinshipLabels.set(couple.gp.id,
+          g(couple.gp, `Bisabuela${s}`, `Bisabuelo${s}`, `Bisabuelo/a${s}`));
+      }
+    });
   }
+
   getWeddingYear(): string | null {
     if (!this.partnerRelation?.fecha_inicio) return null;
     try {
@@ -726,7 +914,30 @@ export class TreeContainerComponent implements OnInit, OnChanges {
 
   onPersonNodeClick(person: Persona) {
     this.editDialogTargetPerson = person;
-    this.isEditPersonDialogOpen = true;
+    this.editDialogParents = [];
+
+    // Buscar IDs de padres desde las relaciones ya cargadas
+    const parentIds = this.allRelations
+      .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === person.id)
+      .map(r => r.persona_1_id);
+
+    if (parentIds.length === 0) {
+      this.isEditPersonDialogOpen = true;
+      return;
+    }
+
+    // Buscar en allPersons primero; si alguno falta, traer TODAS las personas del backend
+    const found = this.allPersons.filter(p => parentIds.includes(p.id));
+    if (found.length === parentIds.length) {
+      this.editDialogParents = found;
+      this.isEditPersonDialogOpen = true;
+    } else {
+      // Algún padre no está en el árbol cargado — buscar sin filtro de árbol
+      this.api.getPersonas().subscribe(todas => {
+        this.editDialogParents = todas.filter(p => parentIds.includes(p.id));
+        this.isEditPersonDialogOpen = true;
+      });
+    }
   }
 
   openAddFirstPerson() {

@@ -39,3 +39,7 @@ dist/
 # ── OS ───────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+# ── Logs & Scratch ───────────────────────────────────────
+frontend_log.txt
+scratch/

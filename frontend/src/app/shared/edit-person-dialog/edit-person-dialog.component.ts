@@ -18,6 +18,50 @@ import { Persona, PersonaCreate } from '../../core/api.service';
         <h2 class="text-2xl font-light text-zen-text mb-1">Editar persona</h2>
         <p class="text-sm text-zen-textMuted mb-6">Actualiza los datos o navega por el árbol.</p>
 
+        <!-- Sección Padres -->
+        <div *ngIf="parents && parents.length > 0" style="
+          margin-bottom: 1.25rem;
+          background: rgba(232,240,255,0.55);
+          border: 1px solid rgba(180,200,240,0.5);
+          border-radius: 14px;
+          padding: 0.75rem 1rem;
+        ">
+          <div style="
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #3A5FA0;
+            margin-bottom: 0.5rem;
+          ">👨‍👩‍👦 Padres</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            <button
+              *ngFor="let parent of parents"
+              type="button"
+              (click)="navigateTo(parent)"
+              style="
+                display: inline-flex; align-items: center; gap: 0.35rem;
+                padding: 0.3rem 0.8rem;
+                background: white;
+                border: 1.5px solid rgba(100,140,210,0.4);
+                border-radius: 999px;
+                font-size: 0.82rem;
+                color: #2E4A80;
+                cursor: pointer;
+                transition: all 0.18s;
+                font-family: 'Georgia', serif;
+                box-shadow: 0 1px 4px rgba(60,100,200,0.08);
+              "
+              onmouseover="this.style.background='rgba(220,230,255,0.7)'; this.style.borderColor='rgba(100,140,210,0.8)'"
+              onmouseout="this.style.background='white'; this.style.borderColor='rgba(100,140,210,0.4)'"
+            >
+              <span style="font-size: 0.75rem;">{{ parent.genero === 'F' ? '👩' : '👨' }}</span>
+              {{ parent.nombre }} {{ parent.apellido }}
+              <span style="font-size: 0.65rem; color: #7A9AD0; margin-left: 2px;">↗</span>
+            </button>
+          </div>
+        </div>
+
         <form (ngSubmit)="onSubmit()" #form="ngForm" class="space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -79,6 +123,7 @@ import { Persona, PersonaCreate } from '../../core/api.service';
 export class EditPersonDialogComponent implements OnChanges {
   @Input() isOpen = false;
   @Input() person: Persona | null = null;
+  @Input() parents: Persona[] = [];
   
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<PersonaCreate>();
@@ -124,5 +169,9 @@ export class EditPersonDialogComponent implements OnChanges {
     if (this.person) {
       this.navigate.emit(this.person);
     }
+  }
+
+  navigateTo(parent: Persona) {
+    this.navigate.emit(parent);
   }
 }

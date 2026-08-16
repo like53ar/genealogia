@@ -60,8 +60,8 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
           💑 Pareja
         </button>
 
-        <!-- Button Hijo/a: for root, partner, child -->
-        <button *ngIf="role === 'root' || role === 'partner' || role === 'child'"
+        <!-- Button Hijo/a: for all roles except ancestor -->
+        <button *ngIf="role !== 'ancestor'"
           (click)="addAction.emit({person: person, type: 'HIJO', subType: 'HIJO'}); $event.stopPropagation()"
           class="action-btn action-btn-hijo"
           title="Añadir Hijo/a">
@@ -79,13 +79,13 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
 
     /* Card base */
     .node-card {
-      width: 160px;
-      padding: 20px 16px 16px;
-      border-radius: 16px;
+      width: 130px;
+      padding: 14px 10px 10px;
+      border-radius: 14px;
       border-width: 1.5px;
       border-style: solid;
       box-shadow: 0 4px 16px -2px rgba(0,0,0,0.08);
-      gap: 4px;
+      gap: 3px;
     }
 
     .node-card:hover {
@@ -95,9 +95,9 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
 
     /* Root node: larger and with double border effect */
     .root-node .node-card {
-      width: 200px;
-      padding: 24px 20px 20px;
-      border-radius: 20px;
+      width: 170px;
+      padding: 20px 16px 16px;
+      border-radius: 18px;
       border-width: 2px;
       box-shadow: 0 0 0 4px rgba(143,164,145,0.2), 0 6px 20px -2px rgba(0,0,0,0.1);
     }
@@ -116,29 +116,29 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
 
     /* Avatar */
     .avatar-circle {
-      width: 52px;
-      height: 52px;
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 17px;
+      font-size: 13px;
       font-weight: 500;
-      margin-bottom: 10px;
+      margin-bottom: 7px;
       border-width: 1.5px;
       border-style: solid;
     }
 
     .root-node .avatar-circle {
-      width: 64px;
-      height: 64px;
-      font-size: 20px;
-      margin-bottom: 12px;
+      width: 56px;
+      height: 56px;
+      font-size: 17px;
+      margin-bottom: 10px;
     }
 
     /* Text */
     .person-name {
-      font-size: 15px;
+      font-size: 12px;
       font-weight: 600;
       color: #334155;
       text-align: center;
@@ -146,11 +146,11 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
     }
 
     .root-node .person-name {
-      font-size: 18px;
+      font-size: 15px;
     }
 
     .person-apellido {
-      font-size: 13px;
+      font-size: 11px;
       color: #64748B;
       text-align: center;
       line-height: 1.3;
