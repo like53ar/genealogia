@@ -1,5 +1,6 @@
 import { Component, inject, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ApiService, Persona, Relacion, PersonaCreate } from '../../core/api.service';
 import { PersonNodeComponent, NodeRole } from './person-node.component';
 import { AddRelativeDialogComponent } from '../../shared/add-relative-dialog/add-relative-dialog.component';
@@ -20,6 +21,7 @@ export interface GrandparentLineage {
 
 export interface ParentBranch {
   parent: Persona;
+  parentSiblings: Persona[];
   grandparents: GrandparentLineage[];
   gpWeddingYear: string | null;
 }
@@ -27,7 +29,7 @@ export interface ParentBranch {
 @Component({
   selector: 'app-tree-container',
   standalone: true,
-  imports: [CommonModule, PersonNodeComponent, AddRelativeDialogComponent, EditPersonDialogComponent],
+  imports: [CommonModule, FormsModule, PersonNodeComponent, AddRelativeDialogComponent, EditPersonDialogComponent],
   template: `
     <div class="tree-viewport">
 
@@ -36,12 +38,31 @@ export interface ParentBranch {
         {{ toastMessage }}
       </div>
 
+      <!-- Barra de herramientas superior: selector rápido de familiares e información -->
+      <div class="tree-toolbar" *ngIf="!loading && allPersons.length > 0">
+        <div class="member-selector-wrap">
+          <label class="member-selector-label">🎯 Centrar árbol en:</label>
+          <select
+            [ngModel]="rootPerson?.id"
+            (ngModelChange)="onRootSelected($event)"
+            class="member-select"
+          >
+            <option *ngFor="let p of allPersons" [value]="p.id">
+              {{ p.nombre }} {{ p.apellido }}
+            </option>
+          </select>
+        </div>
+        <div class="total-members-badge">
+          👥 {{ allPersons.length }} familiares en este árbol
+        </div>
+      </div>
+
       <!-- Loading -->
       <div *ngIf="loading" class="loading-msg">
         Cargando tu historia...
       </div>
 
-      <!-- Recursive template for ancestor couple cards (Bisabuelos, Tatarabuelos, Trastatarabuelos, etc.) -->
+      <!-- Template recursivo para ancestros (Bisabuelos, Tatarabuelos, Trastatarabuelos, etc.) -->
       <ng-template #ancestorCard let-group="group" let-targetName="targetName">
         <div class="ancestor-origin-card" *ngIf="group">
           
@@ -104,7 +125,7 @@ export interface ParentBranch {
 
           </div>
 
-          <!-- Línea vertical que desciende hacia el hijo/a -->
+          <!-- Línea vertical que desciende hacia el descendiente -->
           <div class="v-line-bisabuelos"></div>
         </div>
       </ng-template>
@@ -112,7 +133,7 @@ export interface ParentBranch {
       <!-- Tree Layout -->
       <div *ngIf="!loading && rootPerson" class="tree-layout">
 
-        <!-- ── ANCESTOR BRANCHES: Tatarabuelos, Bisabuelos y Abuelos organizados por origen y rama ── -->
+        <!-- ── ANCESTOR BRANCHES: Tatarabuelos, Bisabuelos, Abuelos y Tíos organizados por origen y rama ── -->
         <div class="ancestor-branches-container" *ngIf="parentBranches.length > 0">
           
           <div class="ancestor-branches-row">
@@ -162,20 +183,39 @@ export interface ParentBranch {
                     </ng-container>
                   </div>
 
-                  <!-- Línea vertical hacia el padre/madre -->
+                  <!-- Línea vertical hacia la fila del padre/madre y tíos -->
                   <div class="v-line-parent-link"></div>
                 </div>
 
-                <!-- Nodo del Padre / Madre -->
-                <div class="parent-node-unit">
-                  <app-person-node
-                    [person]="branch.parent"
-                    [role]="'parent'"
-                    [kinshipLabel]="kinshipLabels.get(branch.parent.id) || ''"
-                    [parentCount]="getParentCount(branch.parent)"
-                    (nodeClick)="onPersonNodeClick(branch.parent)"
-                    (addAction)="openAddRelative(branch.parent, $event.type)"
-                  ></app-person-node>
+                <!-- Fila de la generación del Progenitor y sus Hermanos (Tíos/Tías) -->
+                <div class="parent-generation-row">
+                  
+                  <!-- Tíos / Tías (Hermanos del Progenitor) -->
+                  <div *ngFor="let uncle of branch.parentSiblings" class="parent-sibling-unit">
+                    <div class="v-line-short" *ngIf="branch.grandparents.length > 0"></div>
+                    <app-person-node
+                      [person]="uncle"
+                      [role]="'sibling'"
+                      [kinshipLabel]="kinshipLabels.get(uncle.id) || 'Tío/a'"
+                      [parentCount]="getParentCount(uncle)"
+                      (nodeClick)="onPersonNodeClick(uncle)"
+                      (addAction)="openAddRelative(uncle, $event.type)"
+                    ></app-person-node>
+                  </div>
+
+                  <!-- Nodo del Padre / Madre -->
+                  <div class="parent-node-unit">
+                    <div class="v-line-short" *ngIf="branch.grandparents.length > 0 && branch.parentSiblings.length > 0"></div>
+                    <app-person-node
+                      [person]="branch.parent"
+                      [role]="'parent'"
+                      [kinshipLabel]="kinshipLabels.get(branch.parent.id) || ''"
+                      [parentCount]="getParentCount(branch.parent)"
+                      (nodeClick)="onPersonNodeClick(branch.parent)"
+                      (addAction)="openAddRelative(branch.parent, $event.type)"
+                    ></app-person-node>
+                  </div>
+
                 </div>
 
               </div>
@@ -359,9 +399,10 @@ export interface ParentBranch {
       width: 100%;
       min-height: 80vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 30px 16px 50px;
+      justify-content: flex-start;
+      padding: 24px 16px 50px;
       overflow: auto;
     }
 
@@ -369,6 +410,67 @@ export interface ParentBranch {
       color: #94A3B8;
       font-size: 13px;
       animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    /* ── Toolbar superior ───────────────────────────────── */
+    .tree-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 850px;
+      margin: 0 auto 20px;
+      padding: 6px 14px;
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 14px;
+      border: 1px solid rgba(220, 210, 195, 0.65);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .member-selector-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .member-selector-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #5C4A35;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .member-select {
+      background: white;
+      border: 1.5px solid #D4C4B0;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: #3B3A36;
+      font-family: 'Georgia', serif;
+      outline: none;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      transition: border-color 0.2s;
+    }
+
+    .member-select:focus {
+      border-color: #8FA491;
+    }
+
+    .total-members-badge {
+      font-size: 11px;
+      color: #7A6C58;
+      font-weight: 600;
+      background: rgba(240, 235, 225, 0.85);
+      padding: 4px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(215, 205, 190, 0.6);
     }
 
     /* Toast de éxito */
@@ -416,7 +518,7 @@ export interface ParentBranch {
       flex-direction: row;
       align-items: flex-end;
       justify-content: center;
-      gap: 14px;
+      gap: 16px;
     }
 
     .parent-branch-column {
@@ -521,6 +623,20 @@ export interface ParentBranch {
     }
 
     .grandparent-node-unit, .parent-node-unit, .ancestor-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .parent-generation-row {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .parent-sibling-unit {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -793,6 +909,13 @@ export class TreeContainerComponent implements OnInit, OnChanges {
     this.calculateTree(person);
   }
 
+  onRootSelected(personId: string) {
+    const target = this.allPersons.find(p => p.id === personId);
+    if (target) {
+      this.setRoot(target);
+    }
+  }
+
   /** Construye recursivamente el grupo de ancestros para cualquier persona */
   buildAncestorGroup(person: Persona): AncestorCoupleGroup | null {
     const parentIds = this.allRelations
@@ -890,7 +1013,7 @@ export class TreeContainerComponent implements OnInit, OnChanges {
     });
     this.parents = directParents;
 
-    // 2. Para cada padre, construir su rama de abuelos y ancestros recursivos
+    // 2. Para cada padre, construir su rama de abuelos, ancestros y sus hermanos (Tíos/Tías)
     this.parentBranches = [];
 
     this.parents.forEach(parent => {
@@ -926,6 +1049,18 @@ export class TreeContainerComponent implements OnInit, OnChanges {
         return 0;
       });
 
+      // Hermanos del padre/madre (Tíos y Tías del nodo central)
+      let parentSiblings: Persona[] = [];
+      const allGpIds = directGps.map(g => g.id);
+      if (allGpIds.length > 0) {
+        const uncleIds = Array.from(new Set(
+          this.allRelations
+            .filter(r => r.tipo_relacion === 'PADRE_HIJO' && allGpIds.includes(r.persona_1_id) && r.persona_2_id !== parent.id)
+            .map(r => r.persona_2_id)
+        ));
+        parentSiblings = this.allPersons.filter(p => uncleIds.includes(p.id));
+      }
+
       // Año de matrimonio entre los abuelos (si hay 2)
       let gpWeddingYear: string | null = null;
       if (directGps.length >= 2) {
@@ -941,7 +1076,7 @@ export class TreeContainerComponent implements OnInit, OnChanges {
         }
       }
 
-      // Para cada abuelo, buscar sus ancestros (Bisabuelos, Tatarabuelos, etc.)
+      // Para cada abuelo, buscar sus ancestros recursivamente (Bisabuelos, Tatarabuelos, etc.)
       const gpLineages: GrandparentLineage[] = [];
 
       directGps.forEach(gp => {
@@ -951,6 +1086,7 @@ export class TreeContainerComponent implements OnInit, OnChanges {
 
       this.parentBranches.push({
         parent,
+        parentSiblings,
         grandparents: gpLineages,
         gpWeddingYear
       });
@@ -1019,6 +1155,14 @@ export class TreeContainerComponent implements OnInit, OnChanges {
 
       const lado = parent.genero === 'M' ? 'paterno' : parent.genero === 'F' ? 'materno' : (bIdx === 0 ? 'paterno' : 'materno');
       const sideStr = ` ${lado}`;
+
+      // Asignar etiquetas a tíos/tías (hermanos del progenitor)
+      branch.parentSiblings.forEach(uncle => {
+        const uncleLabel = uncle.genero === 'F'
+          ? `Tía${sideStr}`
+          : `Tío${sideStr}`;
+        this.kinshipLabels.set(uncle.id, uncleLabel);
+      });
 
       branch.grandparents.forEach(gpLineage => {
         const gp = gpLineage.gp;
