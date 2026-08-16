@@ -87,27 +87,27 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner' | 's
 
     /* Card base */
     .node-card {
-      width: 130px;
-      padding: 14px 10px 10px;
-      border-radius: 14px;
+      width: 108px;
+      padding: 8px 6px 6px;
+      border-radius: 11px;
       border-width: 1.5px;
       border-style: solid;
-      box-shadow: 0 4px 16px -2px rgba(0,0,0,0.08);
-      gap: 3px;
+      box-shadow: 0 2px 10px -2px rgba(0,0,0,0.06);
+      gap: 2px;
     }
 
     .node-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 10px 24px -4px rgba(0,0,0,0.12);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px -3px rgba(0,0,0,0.1);
     }
 
     /* Root node: larger and with double border effect */
     .root-node .node-card {
-      width: 170px;
-      padding: 20px 16px 16px;
-      border-radius: 18px;
+      width: 136px;
+      padding: 12px 8px 8px;
+      border-radius: 14px;
       border-width: 2px;
-      box-shadow: 0 0 0 4px rgba(143,164,145,0.2), 0 6px 20px -2px rgba(0,0,0,0.1);
+      box-shadow: 0 0 0 3px rgba(143,164,145,0.2), 0 4px 14px -2px rgba(0,0,0,0.09);
     }
 
     /* Top accent bar for root */
@@ -116,71 +116,71 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner' | 's
       top: 0;
       left: 50%;
       transform: translateX(-50%);
-      width: 48px;
-      height: 4px;
+      width: 36px;
+      height: 3px;
       background: #8FA491;
-      border-radius: 0 0 4px 4px;
+      border-radius: 0 0 3px 3px;
     }
 
     /* Avatar */
     .avatar-circle {
-      width: 42px;
-      height: 42px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 500;
-      margin-bottom: 7px;
+      margin-bottom: 4px;
       border-width: 1.5px;
       border-style: solid;
     }
 
     .root-node .avatar-circle {
-      width: 56px;
-      height: 56px;
-      font-size: 17px;
-      margin-bottom: 10px;
+      width: 42px;
+      height: 42px;
+      font-size: 14px;
+      margin-bottom: 6px;
     }
 
     /* Text */
     .person-name {
-      font-size: 12px;
+      font-size: 10.5px;
       font-weight: 600;
       color: #334155;
       text-align: center;
-      line-height: 1.3;
+      line-height: 1.2;
     }
 
     .root-node .person-name {
-      font-size: 15px;
+      font-size: 12.5px;
     }
 
     .person-apellido {
-      font-size: 11px;
+      font-size: 9.5px;
       color: #64748B;
       text-align: center;
-      line-height: 1.3;
+      line-height: 1.2;
     }
 
     .person-years {
-      font-size: 11px;
+      font-size: 9px;
       color: #94A3B8;
       text-align: center;
-      margin-top: 4px;
+      margin-top: 2px;
       font-weight: 500;
       letter-spacing: 0.02em;
     }
 
     /* Kinship badge */
     .kinship-badge {
-      margin-top: 6px;
-      padding: 2px 10px;
-      border-radius: 20px;
-      font-size: 10px;
+      margin-top: 3px;
+      padding: 1px 6px;
+      border-radius: 12px;
+      font-size: 8.5px;
       font-weight: 600;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.03em;
       text-transform: uppercase;
       opacity: 0.9;
     }
@@ -218,23 +218,24 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner' | 's
     /* Action buttons */
     .action-buttons {
       display: flex;
-      gap: 4px;
-      margin-top: 8px;
+      gap: 2px;
+      margin-top: 5px;
       flex-wrap: wrap;
       justify-content: center;
+      max-width: 170px;
     }
 
     .action-btn {
-      padding: 3px 8px;
+      padding: 2px 5px;
       background: white;
       border: 1px solid #E2E8F0;
-      border-radius: 6px;
-      font-size: 11px;
+      border-radius: 5px;
+      font-size: 9.5px;
       color: #64748B;
       cursor: pointer;
       transition: all 0.2s ease;
       white-space: nowrap;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
     }
 
     .action-btn:hover {
