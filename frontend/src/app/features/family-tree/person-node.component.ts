@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Persona } from '../../core/api.service';
 
-export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
+export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner' | 'sibling';
 
 @Component({
   selector: 'app-person-node',
@@ -209,6 +209,12 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
       border: 1px solid #CFA8E0;
     }
 
+    .kinship-sibling {
+      background: #FFF3E6;
+      color: #8C531B;
+      border: 1px solid #F5D2B0;
+    }
+
     /* Action buttons */
     .action-buttons {
       display: flex;
@@ -298,6 +304,10 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
       background: #F5EDD8;
       border-color: #C9B99A;
     }
+    .card-sibling {
+      background: #FDF7EE;
+      border-color: #D8B98C;
+    }
 
     /* Avatar colors per role */
     .avatar-ancestor {
@@ -325,6 +335,11 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner';
       border-color: #C9B99A;
       color: #7A5C35;
     }
+    .avatar-sibling {
+      background: #F4DEBF;
+      border-color: #D8B98C;
+      color: #7A4F1D;
+    }
   `]
 })
 export class PersonNodeComponent {
@@ -349,6 +364,7 @@ export class PersonNodeComponent {
     if (this.role === 'parent') return 'kinship-badge kinship-parent';
     if (this.role === 'ancestor') return 'kinship-badge kinship-ancestor';
     if (this.role === 'child') return 'kinship-badge kinship-child';
+    if (this.role === 'sibling') return 'kinship-badge kinship-sibling';
     return 'kinship-badge';
   }
 
