@@ -15,12 +15,12 @@ import { Persona, PersonaCreate } from '../../core/api.service';
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
-        <h2 class="text-2xl font-light text-zen-text mb-1">Editar persona</h2>
-        <p class="text-sm text-zen-textMuted mb-6">Actualiza los datos o navega por el árbol.</p>
+        <h2 class="text-2xl font-light text-zen-text mb-1">Ficha de persona</h2>
+        <p class="text-sm text-zen-textMuted mb-4">Detalles del familiar, parentesco y edición de datos.</p>
 
         <!-- Sección Padres -->
         <div *ngIf="parents && parents.length > 0" style="
-          margin-bottom: 1.25rem;
+          margin-bottom: 0.85rem;
           background: rgba(232,240,255,0.55);
           border: 1px solid rgba(180,200,240,0.5);
           border-radius: 14px;
@@ -58,6 +58,56 @@ import { Persona, PersonaCreate } from '../../core/api.service';
               <span style="font-size: 0.75rem;">{{ parent.genero === 'F' ? '👩' : '👨' }}</span>
               {{ parent.nombre }} {{ parent.apellido }}
               <span style="font-size: 0.65rem; color: #7A9AD0; margin-left: 2px;">↗</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sección Hermanos / Hermanas (hijos de los mismos padres) -->
+        <div *ngIf="siblings && siblings.length > 0" style="
+          margin-bottom: 1.15rem;
+          background: rgba(254, 243, 230, 0.65);
+          border: 1px solid rgba(225, 195, 155, 0.6);
+          border-radius: 14px;
+          padding: 0.75rem 1rem;
+        ">
+          <div style="
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #8C5B28;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          ">
+            <span>👫 Hermanos / Hermanas ({{ siblings.length }})</span>
+            <span style="font-size: 0.65rem; color: #A07242; font-weight: 400; text-transform: none;">Hijos del mismo padre/madre</span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            <button
+              *ngFor="let sibling of siblings"
+              type="button"
+              (click)="navigateTo(sibling)"
+              style="
+                display: inline-flex; align-items: center; gap: 0.35rem;
+                padding: 0.3rem 0.8rem;
+                background: white;
+                border: 1.5px solid rgba(210, 175, 130, 0.5);
+                border-radius: 999px;
+                font-size: 0.82rem;
+                color: #6E4215;
+                cursor: pointer;
+                transition: all 0.18s;
+                font-family: 'Georgia', serif;
+                box-shadow: 0 1px 4px rgba(180, 130, 70, 0.08);
+              "
+              onmouseover="this.style.background='rgba(255, 245, 235, 0.9)'; this.style.borderColor='rgba(180, 130, 70, 0.8)'"
+              onmouseout="this.style.background='white'; this.style.borderColor='rgba(210, 175, 130, 0.5)'"
+            >
+              <span style="font-size: 0.75rem;">{{ sibling.genero === 'F' ? '👧' : (sibling.genero === 'M' ? '👦' : '🧑') }}</span>
+              {{ sibling.nombre }} {{ sibling.apellido }}
+              <span style="font-size: 0.65rem; color: #B88A52; margin-left: 2px;">↗</span>
             </button>
           </div>
         </div>
@@ -124,6 +174,7 @@ export class EditPersonDialogComponent implements OnChanges {
   @Input() isOpen = false;
   @Input() person: Persona | null = null;
   @Input() parents: Persona[] = [];
+  @Input() siblings: Persona[] = [];
   
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<PersonaCreate>();
@@ -171,7 +222,7 @@ export class EditPersonDialogComponent implements OnChanges {
     }
   }
 
-  navigateTo(parent: Persona) {
-    this.navigate.emit(parent);
+  navigateTo(target: Persona) {
+    this.navigate.emit(target);
   }
 }

@@ -278,6 +278,7 @@ export interface ParentBranch {
       [targetPerson]="dialogTargetPerson"
       [relativeType]="dialogRelativeType"
       [availablePartners]="dialogPartners"
+      [targetParents]="dialogTargetParents"
       (closed)="isDialogOpen = false"
       (saved)="onRelativeSaved($event)">
     </app-add-relative-dialog>
@@ -286,6 +287,7 @@ export interface ParentBranch {
       [isOpen]="isEditPersonDialogOpen"
       [person]="editDialogTargetPerson"
       [parents]="editDialogParents"
+      [siblings]="editDialogSiblings"
       (closed)="isEditPersonDialogOpen = false"
       (saved)="onPersonEdited($event)"
       (deleted)="onPersonDeleted($event)"
@@ -615,13 +617,15 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   // Dialog State
   isDialogOpen = false;
   dialogTargetPerson: Persona | null = null;
-  dialogRelativeType: 'PADRE' | 'PAREJA' | 'HIJO' = 'PADRE';
+  dialogRelativeType: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO' = 'PADRE';
   dialogPartners: Persona[] = [];
+  dialogTargetParents: Persona[] = [];
 
   // Edit dialog state
   isEditPersonDialogOpen = false;
   editDialogTargetPerson: Persona | null = null;
   editDialogParents: Persona[] = [];
+  editDialogSiblings: Persona[] = [];
 
   ngOnInit() {
     this.loadData();
@@ -918,25 +922,41 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   onPersonNodeClick(person: Persona) {
     this.editDialogTargetPerson = person;
     this.editDialogParents = [];
+    this.editDialogSiblings = [];
 
     // Buscar IDs de padres desde las relaciones ya cargadas
     const parentIds = this.allRelations
       .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === person.id)
       .map(r => r.persona_1_id);
 
-    if (parentIds.length === 0) {
+    // Buscar IDs de hermanos (hijos de los mismos padres, excluyendo a la persona actual)
+    let siblingIds: string[] = [];
+    if (parentIds.length > 0) {
+      siblingIds = Array.from(new Set(
+        this.allRelations
+          .filter(r => r.tipo_relacion === 'PADRE_HIJO' && parentIds.includes(r.persona_1_id) && r.persona_2_id !== person.id)
+          .map(r => r.persona_2_id)
+      ));
+    }
+
+    if (parentIds.length === 0 && siblingIds.length === 0) {
       this.isEditPersonDialogOpen = true;
       return;
     }
 
-    // Buscar en allPersons primero; si alguno falta, traer TODAS las personas del backend
-    const found = this.allPersons.filter(p => parentIds.includes(p.id));
-    if (found.length === parentIds.length) {
-      this.editDialogParents = found;
+    // Buscar en allPersons primero; si alguno falta, traer del backend
+    const neededIds = [...parentIds, ...siblingIds];
+    const foundAll = neededIds.every(id => this.allPersons.some(p => p.id === id));
+
+    if (foundAll) {
+      this.editDialogParents = this.allPersons.filter(p => parentIds.includes(p.id));
+      this.editDialogSiblings = this.allPersons.filter(p => siblingIds.includes(p.id));
       this.isEditPersonDialogOpen = true;
     } else {
       this.api.getPersonas().subscribe(todas => {
+        this.allPersons = todas;
         this.editDialogParents = todas.filter(p => parentIds.includes(p.id));
+        this.editDialogSiblings = todas.filter(p => siblingIds.includes(p.id));
         this.isEditPersonDialogOpen = true;
       });
     }
@@ -948,13 +968,21 @@ export class TreeContainerComponent implements OnInit, OnChanges {
     this.isDialogOpen = true;
   }
 
-  openAddRelative(person: Persona, type: 'PADRE' | 'PAREJA' | 'HIJO') {
+  openAddRelative(person: Persona, type: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO') {
     this.dialogTargetPerson = person;
     this.dialogRelativeType = type;
     if (type === 'HIJO') {
       this.dialogPartners = this.getPartnersOf(person);
+      this.dialogTargetParents = [];
+    } else if (type === 'HERMANO') {
+      this.dialogPartners = [];
+      const parentIds = this.allRelations
+        .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === person.id)
+        .map(r => r.persona_1_id);
+      this.dialogTargetParents = this.allPersons.filter(p => parentIds.includes(p.id));
     } else {
       this.dialogPartners = [];
+      this.dialogTargetParents = [];
     }
     this.isDialogOpen = true;
   }
@@ -967,7 +995,12 @@ export class TreeContainerComponent implements OnInit, OnChanges {
     return this.allPersons.filter(p => partnerIds.includes(p.id));
   }
 
-  onRelativeSaved(event: {personaData: PersonaCreate, relativeType: 'PADRE' | 'PAREJA' | 'HIJO', fechaMatrimonio?: string, otherParentId?: string}) {
+  onRelativeSaved(event: {
+    personaData: PersonaCreate,
+    relativeType: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO',
+    fechaMatrimonio?: string,
+    otherParentId?: string
+  }) {
     const payload = { ...event.personaData };
     if (this.arbolId) {
       payload.arbol_id = this.arbolId;
@@ -988,6 +1021,59 @@ export class TreeContainerComponent implements OnInit, OnChanges {
     }
 
     const targetPerson = this.dialogTargetPerson;
+
+    // Manejo de HERMANO
+    if (event.relativeType === 'HERMANO') {
+      const parentRels = this.allRelations.filter(
+        r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === targetPerson.id
+      );
+
+      this.api.createPersona(payload).subscribe(newPerson => {
+        if (parentRels.length > 0) {
+          // Vincular a los mismos padres que targetPerson
+          let pending = parentRels.length;
+          parentRels.forEach(pRel => {
+            this.api.createRelacion({
+              tipo_relacion: 'PADRE_HIJO',
+              persona_1_id: pRel.persona_1_id,
+              persona_2_id: newPerson.id
+            }).subscribe(() => {
+              pending--;
+              if (pending === 0) {
+                this.isDialogOpen = false;
+                this.showToast('✓ Hermano/a agregado/a con los mismos padres');
+                this.loadData();
+              }
+            });
+          });
+        } else {
+          // Si targetPerson no tenía padres registrados aún, se crea un progenitor común
+          const parentData: PersonaCreate = {
+            nombre: 'Padre/Madre de',
+            apellido: `${targetPerson.nombre} y ${newPerson.nombre}`,
+            arbol_id: this.arbolId || undefined
+          };
+          this.api.createPersona(parentData).subscribe(commonParent => {
+            this.api.createRelacion({
+              tipo_relacion: 'PADRE_HIJO',
+              persona_1_id: commonParent.id,
+              persona_2_id: targetPerson.id
+            }).subscribe(() => {
+              this.api.createRelacion({
+                tipo_relacion: 'PADRE_HIJO',
+                persona_1_id: commonParent.id,
+                persona_2_id: newPerson.id
+              }).subscribe(() => {
+                this.isDialogOpen = false;
+                this.showToast('✓ Hermano/a vinculado/a mediante progenitor común');
+                this.loadData();
+              });
+            });
+          });
+        }
+      });
+      return;
+    }
 
     this.api.createPersona(payload).subscribe(newPerson => {
       let relationPayload: any = {
