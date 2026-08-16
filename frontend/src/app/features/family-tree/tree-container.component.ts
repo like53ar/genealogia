@@ -166,78 +166,107 @@ export interface ParentBranch {
 
         </div>
 
-        <!-- Connector: parents → root (vertical) -->
+        <!-- Connector: parents → center generation (vertical) -->
         <div class="connector-to-root" *ngIf="parents.length > 0">
           <div class="v-line-center"></div>
         </div>
 
-        <!-- ── CENTER ROW: Root + Partner ─────────────────── -->
-        <div class="tree-row center-row">
+        <!-- ── CENTER GENERATION: Hermanos + Root/Pareja + Hijos ── -->
+        <div class="center-generation-wrap">
 
-          <!-- Root node -->
-          <div class="root-unit">
-            <app-person-node
-              [person]="rootPerson"
-              [role]="'root'"
-              [kinshipLabel]="''"
-              [parentCount]="getParentCount(rootPerson)"
-              (nodeClick)="onPersonNodeClick(rootPerson)"
-              (addAction)="openAddRelative(rootPerson, $event.type)"
-            ></app-person-node>
+          <!-- Conector horizontal superior si hay padres y hermanos -->
+          <div class="siblings-connector-bar-wrap" *ngIf="parents.length > 0 && siblings.length > 0">
+            <div class="siblings-h-bar"></div>
           </div>
 
-          <!-- H-connector root → partner (with wedding year) -->
-          <div class="couple-connector-wrap" *ngIf="partners.length > 0">
-            <div class="couple-connector-inner">
-              <!-- Wedding year badge -->
-              <div class="wedding-badge" *ngIf="getWeddingYear()">
-                <span class="wedding-icon">&#x1F48D;</span>
-                <span class="wedding-year">{{ getWeddingYear() }}</span>
-              </div>
-              <div class="h-connector couple-h-line"></div>
-            </div>
-          </div>
+          <div class="tree-row center-row">
 
-          <!-- Partner(s) -->
-          <div class="partners-units" *ngIf="partners.length > 0">
-            <ng-container *ngFor="let partner of partners; let i = index">
-              <div class="h-connector" *ngIf="i > 0"></div>
+            <!-- Hermanos del nodo central -->
+            <div *ngFor="let sib of siblings" class="sibling-unit">
+              <div class="v-line-short" *ngIf="parents.length > 0"></div>
               <app-person-node
-                [person]="partner"
-                [role]="'partner'"
-                [kinshipLabel]="kinshipLabels.get(partner.id) || ''"
-                [parentCount]="getParentCount(partner)"
-                (nodeClick)="onPersonNodeClick(partner)"
-                (addAction)="openAddRelative(partner, $event.type)"
+                [person]="sib"
+                [role]="'sibling'"
+                [kinshipLabel]="kinshipLabels.get(sib.id) || 'Hermano/a'"
+                [parentCount]="getParentCount(sib)"
+                (nodeClick)="onPersonNodeClick(sib)"
+                (addAction)="openAddRelative(sib, $event.type)"
               ></app-person-node>
-            </ng-container>
+            </div>
+
+            <!-- Unidad Central: Root + Pareja + Hijos -->
+            <div class="main-couple-unit">
+              <div class="v-line-short" *ngIf="parents.length > 0 && siblings.length > 0"></div>
+
+              <div class="main-couple-flex">
+                <!-- Root node -->
+                <div class="root-unit">
+                  <app-person-node
+                    [person]="rootPerson"
+                    [role]="'root'"
+                    [kinshipLabel]="''"
+                    [parentCount]="getParentCount(rootPerson)"
+                    (nodeClick)="onPersonNodeClick(rootPerson)"
+                    (addAction)="openAddRelative(rootPerson, $event.type)"
+                  ></app-person-node>
+                </div>
+
+                <!-- H-connector root → partner (with wedding year) -->
+                <div class="couple-connector-wrap" *ngIf="partners.length > 0">
+                  <div class="couple-connector-inner">
+                    <!-- Wedding year badge -->
+                    <div class="wedding-badge" *ngIf="getWeddingYear()">
+                      <span class="wedding-icon">&#x1F48D;</span>
+                      <span class="wedding-year">{{ getWeddingYear() }}</span>
+                    </div>
+                    <div class="h-connector couple-h-line"></div>
+                  </div>
+                </div>
+
+                <!-- Partner(s) -->
+                <div class="partners-units" *ngIf="partners.length > 0">
+                  <ng-container *ngFor="let partner of partners; let i = index">
+                    <div class="h-connector" *ngIf="i > 0"></div>
+                    <app-person-node
+                      [person]="partner"
+                      [role]="'partner'"
+                      [kinshipLabel]="kinshipLabels.get(partner.id) || ''"
+                      [parentCount]="getParentCount(partner)"
+                      (nodeClick)="onPersonNodeClick(partner)"
+                      (addAction)="openAddRelative(partner, $event.type)"
+                    ></app-person-node>
+                  </ng-container>
+                </div>
+              </div>
+
+              <!-- Connector: couple center → children -->
+              <div class="connector-to-children" *ngIf="children.length > 0">
+                <div class="v-line-center"></div>
+              </div>
+
+              <!-- ── CHILDREN ROW ────────────────────────────────── -->
+              <div class="tree-row children-row" *ngIf="children.length > 0">
+                <!-- Horizontal bar connecting children -->
+                <div class="children-h-bar" *ngIf="children.length > 1"></div>
+
+                <div *ngFor="let child of children" class="child-unit">
+                  <!-- Small vertical line from bar to each child -->
+                  <div class="v-line-short" *ngIf="children.length > 1"></div>
+                  <app-person-node
+                    [person]="child"
+                    [role]="'child'"
+                    [kinshipLabel]="kinshipLabels.get(child.id) || ''"
+                    [parentCount]="getParentCount(child)"
+                    (nodeClick)="onPersonNodeClick(child)"
+                    (addAction)="openAddRelative(child, $event.type)"
+                  ></app-person-node>
+                </div>
+              </div>
+
+            </div>
+
           </div>
 
-        </div>
-
-        <!-- Connector: couple center → children -->
-        <div class="connector-to-children" *ngIf="children.length > 0"
-          [class.with-partner]="partners.length > 0">
-          <div class="v-line-center"></div>
-        </div>
-
-        <!-- ── CHILDREN ROW ────────────────────────────────── -->
-        <div class="tree-row children-row" *ngIf="children.length > 0">
-          <!-- Horizontal bar connecting children -->
-          <div class="children-h-bar" *ngIf="children.length > 1"></div>
-
-          <div *ngFor="let child of children" class="child-unit">
-            <!-- Small vertical line from bar to each child -->
-            <div class="v-line-short" *ngIf="children.length > 1"></div>
-            <app-person-node
-              [person]="child"
-              [role]="'child'"
-              [kinshipLabel]="kinshipLabels.get(child.id) || ''"
-              [parentCount]="getParentCount(child)"
-              (nodeClick)="onPersonNodeClick(child)"
-              (addAction)="openAddRelative(child, $event.type)"
-            ></app-person-node>
-          </div>
         </div>
 
       </div>
@@ -476,9 +505,52 @@ export interface ParentBranch {
       justify-content: center;
     }
 
-    .center-row {
+    .center-generation-wrap {
+      display: flex;
+      flex-direction: column;
       align-items: center;
+      position: relative;
+    }
+
+    .siblings-connector-bar-wrap {
+      width: 100%;
+      position: relative;
+      height: 2px;
+      margin-bottom: 0;
+    }
+
+    .siblings-h-bar {
+      position: absolute;
+      top: 0;
+      left: 15%;
+      right: 15%;
+      height: 2px;
+      background: #B8A898;
+    }
+
+    .center-row {
+      align-items: flex-start;
       gap: 0;
+    }
+
+    .sibling-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0 14px;
+    }
+
+    .main-couple-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0 14px;
+    }
+
+    .main-couple-flex {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
     }
 
     .root-unit, .partners-units {
@@ -603,6 +675,7 @@ export class TreeContainerComponent implements OnInit, OnChanges {
 
   parentBranches: ParentBranch[] = [];
   parents: Persona[] = [];
+  siblings: Persona[] = [];
   partners: Persona[] = [];
   children: Persona[] = [];
   partnerRelation: Relacion | null = null;
@@ -649,6 +722,7 @@ export class TreeContainerComponent implements OnInit, OnChanges {
           this.rootPerson = null;
           this.parentBranches = [];
           this.parents = [];
+          this.siblings = [];
           this.partners = [];
           this.children = [];
         } else {
@@ -824,6 +898,19 @@ export class TreeContainerComponent implements OnInit, OnChanges {
       });
     });
 
+    // Hermanos del nodo central (otros hijos de los mismos padres)
+    if (this.parents.length > 0) {
+      const parentIds = this.parents.map(p => p.id);
+      const siblingIds = Array.from(new Set(
+        this.allRelations
+          .filter(r => r.tipo_relacion === 'PADRE_HIJO' && parentIds.includes(r.persona_1_id) && r.persona_2_id !== center.id)
+          .map(r => r.persona_2_id)
+      ));
+      this.siblings = this.allPersons.filter(p => siblingIds.includes(p.id));
+    } else {
+      this.siblings = [];
+    }
+
     // Children
     const childIds = this.allRelations
       .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_1_id === center.id)
@@ -855,6 +942,11 @@ export class TreeContainerComponent implements OnInit, OnChanges {
     // Pareja del nodo raíz
     this.partners.forEach(p =>
       this.kinshipLabels.set(p.id, g(p, 'Esposa', 'Esposo', 'Pareja'))
+    );
+
+    // Hermanos / Hermanas del nodo raíz
+    this.siblings.forEach(p =>
+      this.kinshipLabels.set(p.id, g(p, 'Hermana', 'Hermano', 'Hermano/a'))
     );
 
     // Hijos / Hijas
