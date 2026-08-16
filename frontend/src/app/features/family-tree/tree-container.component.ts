@@ -1,10 +1,13 @@
-import { Component, inject, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, inject, OnInit, Input, OnChanges, SimpleChanges, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Persona, Relacion, PersonaCreate } from '../../core/api.service';
 import { PersonNodeComponent, NodeRole } from './person-node.component';
 import { AddRelativeDialogComponent } from '../../shared/add-relative-dialog/add-relative-dialog.component';
 import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-person-dialog.component';
+import { TimelineDialogComponent } from '../../shared/timeline-dialog/timeline-dialog.component';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 export interface AncestorCoupleGroup {
   p1: Persona;
@@ -29,37 +32,91 @@ export interface ParentBranch {
 @Component({
   selector: 'app-tree-container',
   standalone: true,
-  imports: [CommonModule, FormsModule, PersonNodeComponent, AddRelativeDialogComponent, EditPersonDialogComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PersonNodeComponent,
+    AddRelativeDialogComponent,
+    EditPersonDialogComponent,
+    TimelineDialogComponent
+  ],
   template: `
-    <div class="tree-viewport">
+    <div
+      class="tree-viewport"
+      #treeViewport
+      (wheel)="onWheel($event)"
+      (mousedown)="onMouseDown($event)"
+      (mousemove)="onMouseMove($event)"
+      (mouseup)="onMouseUp()"
+      (mouseleave)="onMouseUp()"
+      [class.cursor-grabbing]="isDragging"
+    >
 
       <!-- Toast de éxito -->
       <div class="success-toast" *ngIf="toastVisible">
         {{ toastMessage }}
       </div>
 
-      <!-- Barra de herramientas superior: selector rápido de familiares e información -->
+      <!-- Barra de herramientas superior: selector rápido de familiares, exportación y cronología -->
       <div class="tree-toolbar" *ngIf="!loading && allPersons.length > 0">
-        <div class="member-selector-wrap">
-          <label class="member-selector-label">🎯 Centrar árbol en:</label>
-          <select
-            [ngModel]="rootPerson?.id"
-            (ngModelChange)="onRootSelected($event)"
-            class="member-select"
-          >
-            <option *ngFor="let p of allPersons" [value]="p.id">
-              {{ p.nombre }} {{ p.apellido }}
-            </option>
-          </select>
+        
+        <div class="toolbar-left-group">
+          <div class="member-selector-wrap">
+            <label class="member-selector-label">🎯 Centrar en:</label>
+            <select
+              [ngModel]="rootPerson?.id"
+              (ngModelChange)="onRootSelected($event)"
+              class="member-select"
+            >
+              <option *ngFor="let p of allPersons" [value]="p.id">
+                {{ p.nombre }} {{ p.apellido }}
+              </option>
+            </select>
+          </div>
+
+          <div class="total-members-badge">
+            👥 {{ allPersons.length }} familiares
+          </div>
         </div>
-        <div class="total-members-badge">
-          👥 {{ allPersons.length }} familiares en este árbol
+
+        <div class="toolbar-right-group">
+          <!-- Botón Línea de Tiempo -->
+          <button (click)="isTimelineOpen = true" class="toolbar-btn timeline-btn" title="Ver cronología histórica">
+            ⏳ Línea de Tiempo
+          </button>
+
+          <!-- Dropdown Exportar -->
+          <div class="export-dropdown-wrap">
+            <button (click)="toggleExportMenu()" class="toolbar-btn export-btn">
+              📥 Exportar ▼
+            </button>
+            <div *ngIf="isExportMenuOpen" class="export-menu animate-scale-up" (click)="$event.stopPropagation()">
+              <button (click)="exportAsImage()" class="export-item" [disabled]="isExporting">
+                📷 Descargar como Imagen PNG
+              </button>
+              <button (click)="exportAsPDF()" class="export-item" [disabled]="isExporting">
+                📄 Descargar como PDF listo para imprimir
+              </button>
+              <button (click)="printTree()" class="export-item" [disabled]="isExporting">
+                🖨️ Imprimir Árbol
+              </button>
+            </div>
+          </div>
         </div>
+
       </div>
 
       <!-- Loading -->
       <div *ngIf="loading" class="loading-msg">
         Cargando tu historia...
+      </div>
+
+      <!-- Exporting Indicator -->
+      <div *ngIf="isExporting" class="exporting-overlay">
+        <div class="exporting-card">
+          <span class="exporting-spinner">⏳</span>
+          <p>Generando archivo en alta resolución...</p>
+        </div>
       </div>
 
       <!-- Template recursivo para ancestros (Bisabuelos, Tatarabuelos, Trastatarabuelos, etc.) -->
@@ -130,10 +187,17 @@ export interface ParentBranch {
         </div>
       </ng-template>
 
-      <!-- Tree Layout -->
-      <div *ngIf="!loading && rootPerson" class="tree-layout">
+      <!-- Tree Layout with Pan & Zoom Transform -->
+      <div
+        #treeLayout
+        *ngIf="!loading && rootPerson"
+        class="tree-layout"
+        [style.transform]="'translate(' + panX + 'px, ' + panY + 'px) scale(' + zoomLevel + ')'"
+        [style.transform-origin]="'top center'"
+        [style.transition]="isDragging ? 'none' : 'transform 0.15s ease-out'"
+      >
 
-        <!-- ── ANCESTOR BRANCHES: Tatarabuelos, Bisabuelos, Abuelos y Tíos organizados por origen y rama ── -->
+        <!-- ── ANCESTOR BRANCHES: Tatarabuelos, Bisabuelos, Abuelos y Tíos ── -->
         <div class="ancestor-branches-container" *ngIf="parentBranches.length > 0">
           
           <div class="ancestor-branches-row">
@@ -158,7 +222,7 @@ export interface ParentBranch {
                         </div>
                       </div>
 
-                      <!-- Columna de linaje del Abuelo/a (Ancestros de este origen ARRIBA, Abuelo/a ABAJO) -->
+                      <!-- Columna de linaje del Abuelo/a (Ancestros ARRIBA, Abuelo/a ABAJO) -->
                       <div class="grandparent-lineage-column">
                         
                         <!-- Cuadro recursivo de Ancestros (Bisabuelos, Tatarabuelos, etc.) -->
@@ -342,30 +406,36 @@ export interface ParentBranch {
       </div>
 
       <!-- Empty state -->
-      <div *ngIf="!loading && !rootPerson" style="
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        padding: 3.5rem 2rem; text-align: center; background: rgba(255,255,255,0.55);
-        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-        border-radius: 24px; border: 1.5px dashed rgba(138,154,106,0.45);
-        max-width: 420px; margin: 3rem auto; box-shadow: 0 10px 30px rgba(0,0,0,0.04);
-      ">
+      <div *ngIf="!loading && !rootPerson" class="empty-state-card">
         <div style="font-size: 3rem; margin-bottom: 0.8rem;">🌱</div>
-        <h3 style="font-family: 'Georgia', serif; font-size: 1.2rem; color: #3b3a36; font-weight: 700; margin: 0 0 0.5rem; text-transform: uppercase; letter-spacing: 0.08em;">
+        <h3 style="font-family: 'Georgia', serif; font-size: 1.2rem; color: #F8ECD5; font-weight: 700; margin: 0 0 0.5rem; text-transform: uppercase; letter-spacing: 0.08em;">
           Árbol Vacío
         </h3>
-        <p style="font-family: 'Georgia', serif; font-size: 0.88rem; color: #7a7368; line-height: 1.6; margin: 0 0 1.8rem;">
+        <p style="font-family: 'Georgia', serif; font-size: 0.88rem; color: #DFC090; line-height: 1.6; margin: 0 0 1.8rem;">
           Este árbol aún no tiene integrantes. Agregá a la primera persona para comenzar a construir la genealogía familiar.
         </p>
         <button (click)="openAddFirstPerson()" style="
           font-family: 'Georgia', serif; font-size: 0.85rem; font-weight: 600;
-          letter-spacing: 0.12em; text-transform: uppercase; color: white;
-          background: linear-gradient(135deg, #7a8c5a, #5a6a42);
+          letter-spacing: 0.12em; text-transform: uppercase; color: #2E1A0C;
+          background: linear-gradient(135deg, #EAD5A8, #D4AF7A);
           border: none; padding: 0.8em 1.8em; border-radius: 12px; cursor: pointer;
-          box-shadow: 0 4px 18px rgba(107,124,85,0.35); transition: transform 0.2s;
+          box-shadow: 0 4px 18px rgba(0,0,0,0.35); transition: transform 0.2s;
         "
         onmouseover="this.style.transform='translateY(-2px)'"
         onmouseout="this.style.transform='translateY(0)'">
           + Agregar primera persona
+        </button>
+      </div>
+
+      <!-- Controles flotantes de Zoom y Pan (esquina inferior derecha) -->
+      <div class="zoom-floating-controls" *ngIf="!loading && rootPerson">
+        <button (click)="zoomIn()" class="zoom-btn" title="Acercar (Zoom In)">+</button>
+        <button (click)="zoomOut()" class="zoom-btn" title="Alejar (Zoom Out)">−</button>
+        <button (click)="resetZoom()" class="zoom-btn zoom-btn-text" title="Restablecer tamaño (100%)">
+          {{ Math.round(zoomLevel * 100) }}%
+        </button>
+        <button (click)="centerView()" class="zoom-btn zoom-btn-text" title="Centrar vista">
+          🎯 Centrar
         </button>
       </div>
 
@@ -393,6 +463,13 @@ export interface ParentBranch {
       (deleted)="onPersonDeleted($event)"
       (navigate)="onPersonNavigate($event)">
     </app-edit-person-dialog>
+
+    <app-timeline-dialog
+      [isOpen]="isTimelineOpen"
+      [allPersons]="allPersons"
+      (closed)="isTimelineOpen = false"
+      (personSelected)="setRoot($event)">
+    </app-timeline-dialog>
   `,
   styles: [`
     /* ── Viewport ──────────────────────────────────────── */
@@ -404,13 +481,22 @@ export interface ParentBranch {
       align-items: center;
       justify-content: flex-start;
       padding: 24px 16px 50px;
-      overflow: auto;
+      overflow: hidden;
+      position: relative;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .cursor-grabbing {
+      cursor: grabbing !important;
     }
 
     .loading-msg {
-      color: #94A3B8;
-      font-size: 13px;
+      color: #DFC090;
+      font-size: 14px;
+      font-family: 'Georgia', serif;
       animation: pulse 1.5s ease-in-out infinite;
+      margin-top: 3rem;
     }
 
     /* ── Toolbar superior ───────────────────────────────── */
@@ -419,16 +505,24 @@ export interface ParentBranch {
       align-items: center;
       justify-content: space-between;
       width: 100%;
-      max-width: 850px;
+      max-width: 960px;
       margin: 0 auto 20px;
-      padding: 7px 16px;
-      background: rgba(30, 20, 13, 0.82);
+      padding: 8px 16px;
+      background: rgba(30, 20, 13, 0.86);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
-      border-radius: 14px;
-      border: 1px solid rgba(212, 175, 120, 0.4);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+      border-radius: 16px;
+      border: 1px solid rgba(212, 175, 120, 0.45);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
       gap: 12px;
+      flex-wrap: wrap;
+      z-index: 20;
+    }
+
+    .toolbar-left-group, .toolbar-right-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       flex-wrap: wrap;
     }
 
@@ -475,6 +569,144 @@ export interface ParentBranch {
       border: 1px solid rgba(212, 175, 120, 0.4);
     }
 
+    .toolbar-btn {
+      font-family: 'Georgia', serif;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #F8ECD5;
+      background: rgba(212, 175, 120, 0.2);
+      border: 1px solid rgba(212, 175, 120, 0.45);
+      border-radius: 8px;
+      padding: 5px 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .toolbar-btn:hover {
+      background: #D4AF37;
+      color: #2E1A0C;
+    }
+
+    .export-dropdown-wrap {
+      position: relative;
+    }
+
+    .export-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      background: rgba(36, 24, 15, 0.96);
+      border: 1.5px solid rgba(212, 175, 120, 0.5);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      min-width: 220px;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 50;
+    }
+
+    .export-item {
+      background: transparent;
+      border: none;
+      color: #F8ECD5;
+      font-family: 'Georgia', serif;
+      font-size: 11.5px;
+      text-align: left;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .export-item:hover {
+      background: rgba(212, 175, 120, 0.3);
+      color: #FFE6B0;
+    }
+
+    /* ── Exporting Overlay ── */
+    .exporting-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(10, 6, 4, 0.7);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .exporting-card {
+      background: rgba(40, 26, 16, 0.95);
+      border: 1.5px solid #D4AF37;
+      border-radius: 18px;
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      color: #F8ECD5;
+      font-family: 'Georgia', serif;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+    }
+
+    .exporting-spinner {
+      font-size: 2.2rem;
+      animation: spin 2s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* ── Floating Zoom Controls ── */
+    .zoom-floating-controls {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(30, 20, 13, 0.88);
+      border: 1.5px solid rgba(212, 175, 120, 0.45);
+      border-radius: 14px;
+      padding: 6px 10px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(10px);
+    }
+
+    .zoom-btn {
+      width: 30px;
+      height: 30px;
+      background: rgba(212, 175, 120, 0.2);
+      border: 1px solid rgba(212, 175, 120, 0.35);
+      border-radius: 8px;
+      color: #F8ECD5;
+      font-weight: 700;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .zoom-btn:hover {
+      background: #D4AF37;
+      color: #2E1A0C;
+    }
+
+    .zoom-btn-text {
+      width: auto;
+      padding: 0 8px;
+      font-size: 11px;
+      font-family: 'Georgia', serif;
+    }
+
     /* Toast de éxito */
     .success-toast {
       position: fixed;
@@ -505,6 +737,7 @@ export interface ParentBranch {
       flex-direction: column;
       align-items: center;
       gap: 0;
+      transform-origin: top center;
     }
 
     /* ── Ancestor Branches Layout ──────────────────────── */
@@ -832,6 +1065,23 @@ export interface ParentBranch {
       box-shadow: 0 0 4px rgba(212, 175, 55, 0.45);
     }
 
+    .empty-state-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3.5rem 2rem;
+      text-align: center;
+      background: rgba(30, 20, 13, 0.85);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 24px;
+      border: 1.5px dashed rgba(212, 175, 120, 0.5);
+      max-width: 420px;
+      margin: 3rem auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.4; }
@@ -842,6 +1092,10 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   private api = inject(ApiService);
 
   @Input() arbolId: string | null = null;
+  @ViewChild('treeLayout') treeLayoutEl?: ElementRef<HTMLElement>;
+  @ViewChild('treeViewport') treeViewportEl?: ElementRef<HTMLElement>;
+
+  Math = Math;
 
   allPersons: Persona[] = [];
   allRelations: Relacion[] = [];
@@ -857,6 +1111,21 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   kinshipLabels = new Map<string, string>();
 
   loading = true;
+
+  // Pan & Zoom State
+  zoomLevel = 1;
+  panX = 0;
+  panY = 0;
+  isDragging = false;
+  dragStartX = 0;
+  dragStartY = 0;
+
+  // Export State
+  isExportMenuOpen = false;
+  isExporting = false;
+
+  // Timeline State
+  isTimelineOpen = false;
 
   // Toast de éxito
   toastMessage = '';
@@ -883,6 +1152,7 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   ngOnChanges(changes: SimpleChanges) {
     if (changes['arbolId'] && !changes['arbolId'].firstChange) {
       this.rootPerson = null;
+      this.resetZoom();
       this.loadData();
     }
   }
@@ -927,6 +1197,134 @@ export class TreeContainerComponent implements OnInit, OnChanges {
     if (target) {
       this.setRoot(target);
     }
+  }
+
+  /* ── Pan & Zoom Methods ────────────────────────────────────────── */
+  zoomIn() {
+    this.zoomLevel = Math.min(2.0, +(this.zoomLevel + 0.15).toFixed(2));
+  }
+
+  zoomOut() {
+    this.zoomLevel = Math.max(0.35, +(this.zoomLevel - 0.15).toFixed(2));
+  }
+
+  resetZoom() {
+    this.zoomLevel = 1;
+    this.panX = 0;
+    this.panY = 0;
+  }
+
+  centerView() {
+    this.panX = 0;
+    this.panY = 0;
+  }
+
+  onWheel(event: WheelEvent) {
+    event.preventDefault();
+    const delta = event.deltaY < 0 ? 0.1 : -0.1;
+    const newZoom = Math.min(2.0, Math.max(0.35, +(this.zoomLevel + delta).toFixed(2)));
+    this.zoomLevel = newZoom;
+  }
+
+  onMouseDown(event: MouseEvent) {
+    // Solo iniciar drag si no se hace clic sobre un botón o selector interactivo
+    const target = event.target as HTMLElement;
+    if (target.closest('button') || target.closest('select') || target.closest('input') || target.closest('.node-card')) {
+      return;
+    }
+    this.isDragging = true;
+    this.dragStartX = event.clientX - this.panX;
+    this.dragStartY = event.clientY - this.panY;
+  }
+
+  onMouseMove(event: MouseEvent) {
+    if (!this.isDragging) return;
+    this.panX = event.clientX - this.dragStartX;
+    this.panY = event.clientY - this.dragStartY;
+  }
+
+  onMouseUp() {
+    this.isDragging = false;
+  }
+
+  /* ── Export Methods (PNG / PDF / Print) ────────────────────────── */
+  toggleExportMenu() {
+    this.isExportMenuOpen = !this.isExportMenuOpen;
+  }
+
+  async exportAsImage() {
+    this.isExportMenuOpen = false;
+    if (!this.treeLayoutEl) return;
+    this.isExporting = true;
+
+    try {
+      // Guardar transformación actual y resetear para captura limpia
+      const origTransform = this.treeLayoutEl.nativeElement.style.transform;
+      this.treeLayoutEl.nativeElement.style.transform = 'none';
+
+      const canvas = await html2canvas(this.treeLayoutEl.nativeElement, {
+        scale: 2,
+        backgroundColor: '#23180F',
+        useCORS: true,
+        logging: false
+      });
+
+      // Restaurar transformación
+      this.treeLayoutEl.nativeElement.style.transform = origTransform;
+
+      const link = document.createElement('a');
+      link.download = `Arbol_Genealogico_${this.rootPerson?.nombre || 'Familia'}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      this.showToast('✓ Imagen PNG descargada en alta resolución');
+    } catch (err) {
+      console.error('Error al exportar imagen:', err);
+      this.showToast('⚠️ No se pudo generar la imagen');
+    } finally {
+      this.isExporting = false;
+    }
+  }
+
+  async exportAsPDF() {
+    this.isExportMenuOpen = false;
+    if (!this.treeLayoutEl) return;
+    this.isExporting = true;
+
+    try {
+      const origTransform = this.treeLayoutEl.nativeElement.style.transform;
+      this.treeLayoutEl.nativeElement.style.transform = 'none';
+
+      const canvas = await html2canvas(this.treeLayoutEl.nativeElement, {
+        scale: 2,
+        backgroundColor: '#23180F',
+        useCORS: true,
+        logging: false
+      });
+
+      this.treeLayoutEl.nativeElement.style.transform = origTransform;
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const isLandscape = canvas.width > canvas.height;
+      const pdf = new jsPDF({
+        orientation: isLandscape ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      });
+
+      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`Arbol_Genealogico_${this.rootPerson?.nombre || 'Familia'}.pdf`);
+      this.showToast('✓ Archivo PDF generado exitosamente');
+    } catch (err) {
+      console.error('Error al exportar PDF:', err);
+      this.showToast('⚠️ No se pudo generar el PDF');
+    } finally {
+      this.isExporting = false;
+    }
+  }
+
+  printTree() {
+    this.isExportMenuOpen = false;
+    window.print();
   }
 
   /** Construye recursivamente el grupo de ancestros para cualquier persona */
