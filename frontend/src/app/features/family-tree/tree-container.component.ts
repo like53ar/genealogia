@@ -421,13 +421,13 @@ export interface ParentBranch {
       width: 100%;
       max-width: 850px;
       margin: 0 auto 20px;
-      padding: 6px 14px;
-      background: rgba(255, 255, 255, 0.72);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      padding: 7px 16px;
+      background: rgba(30, 20, 13, 0.82);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
       border-radius: 14px;
-      border: 1px solid rgba(220, 210, 195, 0.65);
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(212, 175, 120, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
       gap: 12px;
       flex-wrap: wrap;
     }
@@ -441,37 +441,38 @@ export interface ParentBranch {
     .member-selector-label {
       font-size: 11px;
       font-weight: 700;
-      color: #5C4A35;
+      color: #F8ECD5;
       text-transform: uppercase;
       letter-spacing: 0.06em;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     }
 
     .member-select {
-      background: white;
-      border: 1.5px solid #D4C4B0;
+      background: #FAF3E6;
+      border: 1.5px solid #C8A265;
       border-radius: 8px;
       padding: 4px 10px;
       font-size: 12px;
-      color: #3B3A36;
+      color: #302010;
       font-family: 'Georgia', serif;
       outline: none;
       cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
       transition: border-color 0.2s;
     }
 
     .member-select:focus {
-      border-color: #8FA491;
+      border-color: #D4AF37;
     }
 
     .total-members-badge {
       font-size: 11px;
-      color: #7A6C58;
+      color: #E6CEAA;
       font-weight: 600;
-      background: rgba(240, 235, 225, 0.85);
+      background: rgba(55, 38, 24, 0.8);
       padding: 4px 10px;
       border-radius: 8px;
-      border: 1px solid rgba(215, 205, 190, 0.6);
+      border: 1px solid rgba(212, 175, 120, 0.4);
     }
 
     /* Toast de éxito */
@@ -480,13 +481,13 @@ export interface ParentBranch {
       top: 80px;
       right: 24px;
       z-index: 100;
-      background: #4A7A50;
+      background: #3B6B40;
       color: white;
       padding: 8px 16px;
       border-radius: 10px;
       font-size: 12px;
       font-weight: 500;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
       animation: toastFade 2.5s ease forwards;
       pointer-events: none;
     }
@@ -556,12 +557,12 @@ export interface ParentBranch {
       display: flex;
       flex-direction: column;
       align-items: center;
-      background: rgba(255, 252, 245, 0.72);
-      border: 1.5px dashed rgba(184, 168, 152, 0.75);
+      background: rgba(28, 19, 12, 0.65);
+      border: 1.5px dashed rgba(212, 175, 120, 0.6);
       border-radius: 14px;
       padding: 6px 8px 0 8px;
       margin-bottom: 0;
-      box-shadow: 0 2px 10px rgba(100, 90, 70, 0.04);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
     }
 
     .ancestor-origin-header {
@@ -573,9 +574,9 @@ export interface ParentBranch {
       font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: #7A6040;
-      background: rgba(235, 225, 205, 0.85);
-      border: 1px solid rgba(195, 180, 155, 0.6);
+      color: #F8ECD5;
+      background: rgba(212, 175, 120, 0.25);
+      border: 1px solid rgba(212, 175, 120, 0.6);
       border-radius: 999px;
       padding: 1px 6px;
     }
@@ -603,7 +604,8 @@ export interface ParentBranch {
     .v-line-ancestor {
       width: 2px;
       height: 12px;
-      background: #B8A898;
+      background: #D4AF37;
+      box-shadow: 0 0 3px rgba(212, 175, 55, 0.4);
       margin-top: 4px;
       align-self: center;
     }
@@ -611,7 +613,8 @@ export interface ParentBranch {
     .v-line-bisabuelos {
       width: 2px;
       height: 14px;
-      background: #B8A898;
+      background: #D4AF37;
+      box-shadow: 0 0 3px rgba(212, 175, 55, 0.4);
       margin-top: 4px;
       align-self: center;
     }
@@ -619,7 +622,8 @@ export interface ParentBranch {
     .v-line-parent-link {
       width: 2px;
       height: 18px;
-      background: #B8A898;
+      background: #D4AF37;
+      box-shadow: 0 0 3px rgba(212, 175, 55, 0.4);
       align-self: center;
     }
 
@@ -693,7 +697,8 @@ export interface ParentBranch {
       left: 15%;
       right: 15%;
       height: 2px;
-      background: #B8A898;
+      background: #D4AF37;
+      box-shadow: 0 0 4px rgba(212, 175, 55, 0.45);
     }
 
     .center-row {
@@ -742,7 +747,8 @@ export interface ParentBranch {
     /* ── Connectors ─────────────────────────────────────── */
     .h-connector {
       height: 2px;
-      background: #B8A898;
+      background: #D4AF37;
+      box-shadow: 0 0 4px rgba(212, 175, 55, 0.45);
       flex-shrink: 0;
       align-self: center;
     }
@@ -763,8 +769,10 @@ export interface ParentBranch {
       display: flex;
       align-items: center;
       gap: 2px;
-      background: #FDF6EC;
-      border: 1px solid #E8D0A8;
+      background: rgba(32, 22, 14, 0.9);
+      border: 1px solid #D4AF37;
+      color: #F5E6CC;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       border-radius: 8px;
       padding: 1px 5px;
       margin-bottom: 3px;
@@ -777,7 +785,7 @@ export interface ParentBranch {
 
     .wedding-year {
       font-size: 9.5px;
-      color: #8B6A3E;
+      color: #E6C88B;
       font-weight: 600;
       letter-spacing: 0.02em;
     }
@@ -795,7 +803,8 @@ export interface ParentBranch {
     .v-line-center {
       width: 2px;
       height: 20px;
-      background: #B8A898;
+      background: #D4AF37;
+      box-shadow: 0 0 4px rgba(212, 175, 55, 0.45);
     }
 
     .connector-to-children {
@@ -808,7 +817,8 @@ export interface ParentBranch {
     .v-line-short {
       width: 2px;
       height: 14px;
-      background: #B8A898;
+      background: #D4AF37;
+      box-shadow: 0 0 4px rgba(212, 175, 55, 0.45);
       align-self: center;
     }
 
@@ -818,7 +828,8 @@ export interface ParentBranch {
       left: 15%;
       right: 15%;
       height: 2px;
-      background: #B8A898;
+      background: #D4AF37;
+      box-shadow: 0 0 4px rgba(212, 175, 55, 0.45);
     }
 
     @keyframes pulse {
