@@ -31,7 +31,13 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner' | 's
 
         <!-- Years -->
         <div class="person-years">
-          {{ getBirthYear() }} {{ getDeathYear() ? '- ' + getDeathYear() : (getBirthYear() ? '- Presente' : '') }}
+          {{ getBirthYear() }} {{ getDeathYear() ? '- ' + getDeathYear() : (getBirthYear() !== '?' ? '- Presente' : '') }}
+        </div>
+
+        <!-- Country / Place of Origin -->
+        <div class="person-place" *ngIf="getCountryOrPlace()" [title]="person.lugar_nacimiento || ''">
+          <span class="place-icon">📍</span>
+          <span class="place-text">{{ getCountryOrPlace() }}</span>
         </div>
 
         <!-- Kinship badge -->
@@ -178,6 +184,42 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner' | 's
       margin-top: 2px;
       font-weight: 500;
       letter-spacing: 0.02em;
+    }
+
+    /* Country / Place of Origin */
+    .person-place {
+      font-size: 8px;
+      color: #6E4E28;
+      background: rgba(235, 218, 192, 0.55);
+      border: 1px solid rgba(195, 168, 128, 0.55);
+      border-radius: 999px;
+      padding: 1px 5px;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      max-width: 96%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .place-icon {
+      font-size: 7.5px;
+    }
+
+    .place-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .root-node .person-place {
+      font-size: 9px;
+      padding: 1px 7px;
     }
 
     /* Kinship badge */
@@ -398,6 +440,16 @@ export class PersonNodeComponent {
   getDeathYear(): string | null {
     if (!this.person.fecha_fallecimiento) return null;
     return new Date(this.person.fecha_fallecimiento).getFullYear().toString();
+  }
+
+  getCountryOrPlace(): string | null {
+    if (!this.person.lugar_nacimiento || !this.person.lugar_nacimiento.trim()) {
+      return null;
+    }
+    const raw = this.person.lugar_nacimiento.trim();
+    const parts = raw.split(',').map(s => s.trim()).filter(s => s);
+    if (parts.length === 0) return null;
+    return parts[parts.length - 1];
   }
 }
 
