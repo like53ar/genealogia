@@ -103,6 +103,33 @@ import { Persona, PersonaCreate } from '../../core/api.service';
             </p>
           </div>
 
+          <!-- Mensaje contextual para PRIMO/A -->
+          <div *ngIf="relativeType === 'PRIMO'" class="cousin-field">
+            <label class="block text-xs font-medium mb-1 ml-1" style="color: #2E6E3D;">
+              🌿 Vínculo de primos (hijo/a de un Tío/Tía)
+            </label>
+            <div *ngIf="availableUncles.length > 0" class="mb-2">
+              <label class="block text-xs text-zen-textMuted mb-1 ml-1">Seleccionar Tío/Tía existente como progenitor:</label>
+              <select [(ngModel)]="selectedUncleId" name="uncleId" class="input-zen bg-white text-xs" style="border-color: #A3C9A8;">
+                <option value="">— Crear nuevo Tío/Tía como progenitor —</option>
+                <option *ngFor="let u of availableUncles" [value]="u.id">
+                  {{ u.nombre }} {{ u.apellido }} (Tío/a de {{ targetPerson?.nombre }})
+                </option>
+              </select>
+            </div>
+            <div *ngIf="!selectedUncleId">
+              <label class="block text-xs text-zen-textMuted mb-1 ml-1">Nombre del Tío/Tía (padre o madre del primo):</label>
+              <input
+                type="text"
+                [(ngModel)]="nuevoTioNombre"
+                name="nuevoTioNombre"
+                placeholder="Ej: Tío Carlos"
+                class="input-zen text-xs"
+                style="border-color: #A3C9A8;"
+              />
+            </div>
+          </div>
+
           <!-- Selector de otro progenitor — solo para HIJO y cuando hay parejas disponibles -->
           <div *ngIf="relativeType === 'HIJO' && availablePartners.length > 0" class="other-parent-field">
             <label class="block text-xs font-medium mb-1 ml-1" style="color: #5a7a8a;">
@@ -153,6 +180,12 @@ import { Persona, PersonaCreate } from '../../core/api.service';
       border-radius: 12px;
       padding: 12px;
     }
+    .cousin-field {
+      background: #F2FAF4;
+      border: 1px solid #C4E2CB;
+      border-radius: 12px;
+      padding: 12px;
+    }
     .other-parent-field {
       background: #F0F6F8;
       border: 1px solid #C0D8E0;
@@ -164,16 +197,19 @@ import { Persona, PersonaCreate } from '../../core/api.service';
 export class AddRelativeDialogComponent {
   @Input() isOpen = false;
   @Input() targetPerson: Persona | null = null;
-  @Input() relativeType: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO' = 'PADRE';
+  @Input() relativeType: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO' | 'PRIMO' = 'PADRE';
   @Input() availablePartners: Persona[] = [];
   @Input() targetParents: Persona[] = [];
+  @Input() availableUncles: Persona[] = [];
   
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<{
     personaData: PersonaCreate;
-    relativeType: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO';
+    relativeType: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO' | 'PRIMO';
     fechaMatrimonio?: string;
     otherParentId?: string;
+    selectedUncleId?: string;
+    nuevoTioNombre?: string;
   }>();
 
   persona: PersonaCreate = { nombre: '', apellido: '', genero: '', fecha_nacimiento: '', fecha_muerte: '', lugar_nacimiento: '', notas: '' };
@@ -182,6 +218,8 @@ export class AddRelativeDialogComponent {
   pais = '';
   fechaMatrimonio = '';
   selectedOtherParentId = '';
+  selectedUncleId = '';
+  nuevoTioNombre = '';
   loading = false;
 
   getRelativeTypeName() {
@@ -190,6 +228,7 @@ export class AddRelativeDialogComponent {
       case 'PAREJA': return 'una pareja';
       case 'HIJO': return 'un hijo/a';
       case 'HERMANO': return 'un hermano/a';
+      case 'PRIMO': return 'un primo/a';
       default: return 'un familiar';
     }
   }
@@ -211,6 +250,8 @@ export class AddRelativeDialogComponent {
         relativeType: this.relativeType,
         fechaMatrimonio: this.fechaMatrimonio || undefined,
         otherParentId: this.selectedOtherParentId || undefined,
+        selectedUncleId: this.selectedUncleId || undefined,
+        nuevoTioNombre: this.nuevoTioNombre || undefined,
       });
     }
   }
@@ -222,6 +263,8 @@ export class AddRelativeDialogComponent {
     this.pais = '';
     this.fechaMatrimonio = '';
     this.selectedOtherParentId = '';
+    this.selectedUncleId = '';
+    this.nuevoTioNombre = '';
     this.loading = false;
   }
 }

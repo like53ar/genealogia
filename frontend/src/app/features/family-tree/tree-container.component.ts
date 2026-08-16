@@ -378,6 +378,7 @@ export interface ParentBranch {
       [relativeType]="dialogRelativeType"
       [availablePartners]="dialogPartners"
       [targetParents]="dialogTargetParents"
+      [availableUncles]="dialogAvailableUncles"
       (closed)="isDialogOpen = false"
       (saved)="onRelativeSaved($event)">
     </app-add-relative-dialog>
@@ -853,9 +854,10 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   // Dialog State
   isDialogOpen = false;
   dialogTargetPerson: Persona | null = null;
-  dialogRelativeType: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO' = 'PADRE';
+  dialogRelativeType: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO' | 'PRIMO' = 'PADRE';
   dialogPartners: Persona[] = [];
   dialogTargetParents: Persona[] = [];
+  dialogAvailableUncles: Persona[] = [];
 
   // Edit dialog state
   isEditPersonDialogOpen = false;
@@ -1287,21 +1289,38 @@ export class TreeContainerComponent implements OnInit, OnChanges {
     this.isDialogOpen = true;
   }
 
-  openAddRelative(person: Persona, type: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO') {
+  openAddRelative(person: Persona, type: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO' | 'PRIMO') {
     this.dialogTargetPerson = person;
     this.dialogRelativeType = type;
+    this.dialogPartners = [];
+    this.dialogTargetParents = [];
+    this.dialogAvailableUncles = [];
+
     if (type === 'HIJO') {
       this.dialogPartners = this.getPartnersOf(person);
-      this.dialogTargetParents = [];
     } else if (type === 'HERMANO') {
-      this.dialogPartners = [];
       const parentIds = this.allRelations
         .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === person.id)
         .map(r => r.persona_1_id);
       this.dialogTargetParents = this.allPersons.filter(p => parentIds.includes(p.id));
-    } else {
-      this.dialogPartners = [];
-      this.dialogTargetParents = [];
+    } else if (type === 'PRIMO') {
+      // Buscar padres de person
+      const parentIds = this.allRelations
+        .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === person.id)
+        .map(r => r.persona_1_id);
+      // Buscar abuelos de person
+      const gpIds = this.allRelations
+        .filter(r => r.tipo_relacion === 'PADRE_HIJO' && parentIds.includes(r.persona_2_id))
+        .map(r => r.persona_1_id);
+      // Buscar tíos (hijos de los abuelos que no son el padre directo ni person)
+      if (gpIds.length > 0) {
+        const uncleIds = Array.from(new Set(
+          this.allRelations
+            .filter(r => r.tipo_relacion === 'PADRE_HIJO' && gpIds.includes(r.persona_1_id) && !parentIds.includes(r.persona_2_id) && r.persona_2_id !== person.id)
+            .map(r => r.persona_2_id)
+        ));
+        this.dialogAvailableUncles = this.allPersons.filter(p => uncleIds.includes(p.id));
+      }
     }
     this.isDialogOpen = true;
   }
@@ -1316,9 +1335,11 @@ export class TreeContainerComponent implements OnInit, OnChanges {
 
   onRelativeSaved(event: {
     personaData: PersonaCreate,
-    relativeType: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO',
+    relativeType: 'PADRE' | 'PAREJA' | 'HIJO' | 'HERMANO' | 'PRIMO',
     fechaMatrimonio?: string,
-    otherParentId?: string
+    otherParentId?: string,
+    selectedUncleId?: string,
+    nuevoTioNombre?: string
   }) {
     const payload = { ...event.personaData };
     if (this.arbolId) {
@@ -1387,6 +1408,75 @@ export class TreeContainerComponent implements OnInit, OnChanges {
                 this.showToast('✓ Hermano/a vinculado/a mediante progenitor común');
                 this.loadData();
               });
+            });
+          });
+        }
+      });
+      return;
+    }
+
+    // Manejo de PRIMO
+    if (event.relativeType === 'PRIMO') {
+      this.api.createPersona(payload).subscribe(newCousin => {
+        if (event.selectedUncleId) {
+          // Vincular directamente al tío seleccionado
+          this.api.createRelacion({
+            tipo_relacion: 'PADRE_HIJO',
+            persona_1_id: event.selectedUncleId,
+            persona_2_id: newCousin.id
+          }).subscribe(() => {
+            this.isDialogOpen = false;
+            this.showToast('✓ Primo/a vinculado/a mediante su progenitor (Tío/a)');
+            this.loadData();
+          });
+        } else {
+          // Crear un nuevo Tío/Tía para el primo
+          const tioNombre = event.nuevoTioNombre && event.nuevoTioNombre.trim()
+            ? event.nuevoTioNombre.trim()
+            : `Tío/a de ${targetPerson.nombre}`;
+
+          const tioData: PersonaCreate = {
+            nombre: tioNombre,
+            apellido: targetPerson.apellido,
+            arbol_id: this.arbolId || undefined
+          };
+
+          this.api.createPersona(tioData).subscribe(newUncle => {
+            // Relación Tío -> Primo
+            this.api.createRelacion({
+              tipo_relacion: 'PADRE_HIJO',
+              persona_1_id: newUncle.id,
+              persona_2_id: newCousin.id
+            }).subscribe(() => {
+              // Si targetPerson tiene abuelos, vincular los abuelos -> nuevo Tío
+              const parentIds = this.allRelations
+                .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === targetPerson.id)
+                .map(r => r.persona_1_id);
+              const gpIds = this.allRelations
+                .filter(r => r.tipo_relacion === 'PADRE_HIJO' && parentIds.includes(r.persona_2_id))
+                .map(r => r.persona_1_id);
+
+              if (gpIds.length > 0) {
+                let pending = gpIds.length;
+                gpIds.forEach(gpId => {
+                  this.api.createRelacion({
+                    tipo_relacion: 'PADRE_HIJO',
+                    persona_1_id: gpId,
+                    persona_2_id: newUncle.id
+                  }).subscribe(() => {
+                    pending--;
+                    if (pending === 0) {
+                      this.isDialogOpen = false;
+                      this.showToast('✓ Primo/a y Tío/a agregados a la rama familiar');
+                      this.loadData();
+                    }
+                  });
+                });
+              } else {
+                this.isDialogOpen = false;
+                this.showToast('✓ Primo/a y Tío/a agregados a la rama familiar');
+                this.loadData();
+              }
             });
           });
         }
