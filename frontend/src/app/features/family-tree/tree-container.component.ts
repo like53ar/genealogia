@@ -5,15 +5,17 @@ import { PersonNodeComponent, NodeRole } from './person-node.component';
 import { AddRelativeDialogComponent } from '../../shared/add-relative-dialog/add-relative-dialog.component';
 import { EditPersonDialogComponent } from '../../shared/edit-person-dialog/edit-person-dialog.component';
 
-export interface BisabueloGroup {
+export interface AncestorCoupleGroup {
   p1: Persona;
   p2: Persona | null;
   weddingYear: string | null;
+  p1Ancestors?: AncestorCoupleGroup | null;
+  p2Ancestors?: AncestorCoupleGroup | null;
 }
 
 export interface GrandparentLineage {
   gp: Persona;
-  bisabuelos: BisabueloGroup | null;
+  ancestors: AncestorCoupleGroup | null;
 }
 
 export interface ParentBranch {
@@ -39,10 +41,78 @@ export interface ParentBranch {
         Cargando tu historia...
       </div>
 
+      <!-- Recursive template for ancestor couple cards (Bisabuelos, Tatarabuelos, Trastatarabuelos, etc.) -->
+      <ng-template #ancestorCard let-group="group" let-targetName="targetName">
+        <div class="ancestor-origin-card" *ngIf="group">
+          
+          <div class="ancestor-origin-header">
+            <span class="origin-badge">Padres de {{ targetName }}</span>
+          </div>
+
+          <div class="ancestor-couple-flex">
+
+            <!-- Columna para P1 (con sus propios ancestros arriba si los tiene) -->
+            <div class="ancestor-subcolumn">
+              <ng-container *ngIf="group.p1Ancestors">
+                <ng-container *ngTemplateOutlet="ancestorCard; context: { group: group.p1Ancestors, targetName: group.p1.nombre }"></ng-container>
+                <div class="v-line-ancestor"></div>
+              </ng-container>
+
+              <div class="ancestor-unit">
+                <app-person-node
+                  [person]="group.p1"
+                  [role]="'ancestor'"
+                  [kinshipLabel]="kinshipLabels.get(group.p1.id) || ''"
+                  [parentCount]="getParentCount(group.p1)"
+                  (nodeClick)="onPersonNodeClick(group.p1)"
+                  (addAction)="openAddRelative(group.p1, $event.type)"
+                ></app-person-node>
+              </div>
+            </div>
+
+            <!-- Conector de matrimonio entre P1 y P2 -->
+            <ng-container *ngIf="group.p2">
+              <div class="couple-connector-wrap ancestor-connector-wrap">
+                <div class="couple-connector-inner">
+                  <div class="wedding-badge" *ngIf="group.weddingYear">
+                    <span class="wedding-icon">&#x1F48D;</span>
+                    <span class="wedding-year">{{ group.weddingYear }}</span>
+                  </div>
+                  <div class="h-connector couple-h-line"></div>
+                </div>
+              </div>
+
+              <!-- Columna para P2 (con sus propios ancestros arriba si los tiene) -->
+              <div class="ancestor-subcolumn">
+                <ng-container *ngIf="group.p2Ancestors">
+                  <ng-container *ngTemplateOutlet="ancestorCard; context: { group: group.p2Ancestors, targetName: group.p2.nombre }"></ng-container>
+                  <div class="v-line-ancestor"></div>
+                </ng-container>
+
+                <div class="ancestor-unit">
+                  <app-person-node
+                    [person]="group.p2"
+                    [role]="'ancestor'"
+                    [kinshipLabel]="kinshipLabels.get(group.p2.id) || ''"
+                    [parentCount]="getParentCount(group.p2)"
+                    (nodeClick)="onPersonNodeClick(group.p2)"
+                    (addAction)="openAddRelative(group.p2, $event.type)"
+                  ></app-person-node>
+                </div>
+              </div>
+            </ng-container>
+
+          </div>
+
+          <!-- Línea vertical que desciende hacia el hijo/a -->
+          <div class="v-line-bisabuelos"></div>
+        </div>
+      </ng-template>
+
       <!-- Tree Layout -->
       <div *ngIf="!loading && rootPerson" class="tree-layout">
 
-        <!-- ── ANCESTOR BRANCHES: Bisabuelos y Abuelos organizados por origen y rama ── -->
+        <!-- ── ANCESTOR BRANCHES: Tatarabuelos, Bisabuelos y Abuelos organizados por origen y rama ── -->
         <div class="ancestor-branches-container" *ngIf="parentBranches.length > 0">
           
           <div class="ancestor-branches-row">
@@ -50,7 +120,7 @@ export interface ParentBranch {
 
               <div class="parent-branch-column">
                 
-                <!-- Subárbol de Abuelos y Bisabuelos de este Progenitor -->
+                <!-- Subárbol de Abuelos y Ancestros de este Progenitor -->
                 <div class="grandparents-branch-group" *ngIf="branch.grandparents.length > 0">
                   <div class="grandparent-subbranch-container">
                     
@@ -67,53 +137,13 @@ export interface ParentBranch {
                         </div>
                       </div>
 
-                      <!-- Columna de linaje del Abuelo/a (Bisabuelos de este origen ARRIBA, Abuelo/a ABAJO) -->
+                      <!-- Columna de linaje del Abuelo/a (Ancestros de este origen ARRIBA, Abuelo/a ABAJO) -->
                       <div class="grandparent-lineage-column">
                         
-                        <!-- Cuadro unificado de Bisabuelos de este origen -->
-                        <div class="bisabuelos-origin-card" *ngIf="gpItem.bisabuelos">
-                          <div class="bisabuelos-origin-header">
-                            <span class="origin-badge">Padres de {{ gpItem.gp.nombre }}</span>
-                          </div>
-                          
-                          <div class="bisabuelos-couple-flex">
-                            <div class="ancestor-unit">
-                              <app-person-node
-                                [person]="gpItem.bisabuelos.p1"
-                                [role]="'ancestor'"
-                                [kinshipLabel]="kinshipLabels.get(gpItem.bisabuelos.p1.id) || ''"
-                                [parentCount]="getParentCount(gpItem.bisabuelos.p1)"
-                                (nodeClick)="onPersonNodeClick(gpItem.bisabuelos.p1)"
-                                (addAction)="openAddRelative(gpItem.bisabuelos.p1, $event.type)"
-                              ></app-person-node>
-                            </div>
-
-                            <ng-container *ngIf="gpItem.bisabuelos.p2">
-                              <div class="couple-connector-wrap">
-                                <div class="couple-connector-inner">
-                                  <div class="wedding-badge" *ngIf="gpItem.bisabuelos.weddingYear">
-                                    <span class="wedding-icon">&#x1F48D;</span>
-                                    <span class="wedding-year">{{ gpItem.bisabuelos.weddingYear }}</span>
-                                  </div>
-                                  <div class="h-connector couple-h-line"></div>
-                                </div>
-                              </div>
-                              <div class="ancestor-unit">
-                                <app-person-node
-                                  [person]="gpItem.bisabuelos.p2"
-                                  [role]="'ancestor'"
-                                  [kinshipLabel]="kinshipLabels.get(gpItem.bisabuelos.p2.id) || ''"
-                                  [parentCount]="getParentCount(gpItem.bisabuelos.p2)"
-                                  (nodeClick)="onPersonNodeClick(gpItem.bisabuelos.p2)"
-                                  (addAction)="openAddRelative(gpItem.bisabuelos.p2, $event.type)"
-                                ></app-person-node>
-                              </div>
-                            </ng-container>
-                          </div>
-
-                          <!-- Línea vertical que desciende hacia el abuelo correspondiente -->
-                          <div class="v-line-bisabuelos"></div>
-                        </div>
+                        <!-- Cuadro recursivo de Ancestros (Bisabuelos, Tatarabuelos, etc.) -->
+                        <ng-container *ngIf="gpItem.ancestors">
+                          <ng-container *ngTemplateOutlet="ancestorCard; context: { group: gpItem.ancestors, targetName: gpItem.gp.nombre }"></ng-container>
+                        </ng-container>
 
                         <!-- Nodo del Abuelo / Abuela -->
                         <div class="grandparent-node-unit">
@@ -331,13 +361,13 @@ export interface ParentBranch {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 40px 20px 60px;
+      padding: 30px 16px 50px;
       overflow: auto;
     }
 
     .loading-msg {
       color: #94A3B8;
-      font-size: 14px;
+      font-size: 13px;
       animation: pulse 1.5s ease-in-out infinite;
     }
 
@@ -349,9 +379,9 @@ export interface ParentBranch {
       z-index: 100;
       background: #4A7A50;
       color: white;
-      padding: 10px 20px;
-      border-radius: 12px;
-      font-size: 13px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 12px;
       font-weight: 500;
       box-shadow: 0 4px 16px rgba(0,0,0,0.15);
       animation: toastFade 2.5s ease forwards;
@@ -386,7 +416,7 @@ export interface ParentBranch {
       flex-direction: row;
       align-items: flex-end;
       justify-content: center;
-      gap: 24px;
+      gap: 14px;
     }
 
     .parent-branch-column {
@@ -408,7 +438,7 @@ export interface ParentBranch {
       flex-direction: row;
       align-items: flex-end;
       justify-content: center;
-      gap: 16px;
+      gap: 10px;
     }
 
     .grandparent-lineage-column {
@@ -418,53 +448,74 @@ export interface ParentBranch {
       justify-content: flex-end;
     }
 
-    /* ── Cuadro de Bisabuelos por Origen ── */
-    .bisabuelos-origin-card {
+    /* ── Cuadro de Ancestros por Origen (Bisabuelos, Tatarabuelos, etc.) ── */
+    .ancestor-origin-card {
       display: flex;
       flex-direction: column;
       align-items: center;
       background: rgba(255, 252, 245, 0.72);
       border: 1.5px dashed rgba(184, 168, 152, 0.75);
-      border-radius: 18px;
-      padding: 8px 12px 0 12px;
+      border-radius: 14px;
+      padding: 6px 8px 0 8px;
       margin-bottom: 0;
-      box-shadow: 0 4px 16px rgba(100, 90, 70, 0.05);
+      box-shadow: 0 2px 10px rgba(100, 90, 70, 0.04);
     }
 
-    .bisabuelos-origin-header {
-      margin-bottom: 6px;
+    .ancestor-origin-header {
+      margin-bottom: 4px;
     }
 
     .origin-badge {
-      font-size: 9px;
+      font-size: 8px;
       font-weight: 700;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       color: #7A6040;
       background: rgba(235, 225, 205, 0.85);
       border: 1px solid rgba(195, 180, 155, 0.6);
       border-radius: 999px;
-      padding: 2px 8px;
+      padding: 1px 6px;
     }
 
-    .bisabuelos-couple-flex {
+    .ancestor-couple-flex {
       display: flex;
       flex-direction: row;
-      align-items: center;
+      align-items: flex-end;
+      justify-content: center;
       gap: 0;
+    }
+
+    .ancestor-subcolumn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .ancestor-connector-wrap {
+      align-self: flex-end;
+      margin-bottom: 30px;
+    }
+
+    .v-line-ancestor {
+      width: 2px;
+      height: 12px;
+      background: #B8A898;
+      margin-top: 4px;
+      align-self: center;
     }
 
     .v-line-bisabuelos {
       width: 2px;
-      height: 20px;
+      height: 14px;
       background: #B8A898;
-      margin-top: 6px;
+      margin-top: 4px;
       align-self: center;
     }
 
     .v-line-parent-link {
       width: 2px;
-      height: 28px;
+      height: 18px;
       background: #B8A898;
       align-self: center;
     }
@@ -479,22 +530,22 @@ export interface ParentBranch {
       display: flex;
       align-items: center;
       align-self: flex-end;
-      margin-bottom: 50px;
+      margin-bottom: 35px;
     }
 
     .gp-h-line {
-      width: 44px;
+      width: 28px;
     }
 
     .parents-mid-connector-wrap {
       display: flex;
       align-items: center;
       align-self: flex-end;
-      margin-bottom: 50px;
+      margin-bottom: 35px;
     }
 
     .parents-h-line {
-      width: 48px;
+      width: 32px;
     }
 
     /* ── Rows ───────────────────────────────────────────── */
@@ -537,14 +588,14 @@ export interface ParentBranch {
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin: 0 14px;
+      margin: 0 10px;
     }
 
     .main-couple-unit {
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin: 0 14px;
+      margin: 0 10px;
     }
 
     .main-couple-flex {
@@ -561,7 +612,8 @@ export interface ParentBranch {
     .children-row {
       position: relative;
       align-items: flex-start;
-      gap: 20px;
+      gap: 14px;
+      margin-top: 0;
     }
 
     .child-unit {
@@ -593,28 +645,28 @@ export interface ParentBranch {
     .wedding-badge {
       display: flex;
       align-items: center;
-      gap: 3px;
+      gap: 2px;
       background: #FDF6EC;
       border: 1px solid #E8D0A8;
-      border-radius: 10px;
-      padding: 2px 7px;
-      margin-bottom: 4px;
+      border-radius: 8px;
+      padding: 1px 5px;
+      margin-bottom: 3px;
       white-space: nowrap;
     }
 
     .wedding-icon {
-      font-size: 11px;
+      font-size: 10px;
     }
 
     .wedding-year {
-      font-size: 11px;
+      font-size: 9.5px;
       color: #8B6A3E;
       font-weight: 600;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.02em;
     }
 
     .couple-h-line {
-      width: 44px;
+      width: 28px;
     }
 
     .connector-to-root {
@@ -625,7 +677,7 @@ export interface ParentBranch {
 
     .v-line-center {
       width: 2px;
-      height: 32px;
+      height: 20px;
       background: #B8A898;
     }
 
@@ -636,14 +688,9 @@ export interface ParentBranch {
       position: relative;
     }
 
-    .connector-to-children.with-partner {
-      justify-content: flex-start;
-      transform: translateX(95px);
-    }
-
     .v-line-short {
       width: 2px;
-      height: 20px;
+      height: 14px;
       background: #B8A898;
       align-self: center;
     }
@@ -746,6 +793,68 @@ export class TreeContainerComponent implements OnInit, OnChanges {
     this.calculateTree(person);
   }
 
+  /** Construye recursivamente el grupo de ancestros para cualquier persona */
+  buildAncestorGroup(person: Persona): AncestorCoupleGroup | null {
+    const parentIds = this.allRelations
+      .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === person.id)
+      .map(r => r.persona_1_id);
+    let directParents = this.allPersons.filter(p => parentIds.includes(p.id));
+
+    if (directParents.length === 1) {
+      const singleParent = directParents[0];
+      const partnerRel = this.allRelations.find(
+        r => r.tipo_relacion === 'PAREJA' &&
+          (r.persona_1_id === singleParent.id || r.persona_2_id === singleParent.id)
+      );
+      if (partnerRel) {
+        const partnerId = partnerRel.persona_1_id === singleParent.id
+          ? partnerRel.persona_2_id
+          : partnerRel.persona_1_id;
+        if (!directParents.some(p => p.id === partnerId)) {
+          const partnerPerson = this.allPersons.find(p => p.id === partnerId);
+          if (partnerPerson) {
+            directParents.push(partnerPerson);
+          }
+        }
+      }
+    }
+
+    if (directParents.length === 0) {
+      return null;
+    }
+
+    directParents.sort((a, b) => {
+      if (a.genero === 'M' && b.genero !== 'M') return -1;
+      if (a.genero !== 'M' && b.genero === 'M') return 1;
+      return 0;
+    });
+
+    const p1 = directParents[0];
+    const p2 = directParents.length > 1 ? directParents[1] : null;
+
+    let weddingYear: string | null = null;
+    if (p2) {
+      const pairRel = this.allRelations.find(
+        r => r.tipo_relacion === 'PAREJA' &&
+          ((r.persona_1_id === p1.id && r.persona_2_id === p2.id) ||
+           (r.persona_1_id === p2.id && r.persona_2_id === p1.id))
+      );
+      if (pairRel?.fecha_inicio) {
+        try {
+          weddingYear = new Date(pairRel.fecha_inicio + 'T00:00:00').getFullYear().toString();
+        } catch { weddingYear = null; }
+      }
+    }
+
+    return {
+      p1,
+      p2,
+      weddingYear,
+      p1Ancestors: this.buildAncestorGroup(p1),
+      p2Ancestors: p2 ? this.buildAncestorGroup(p2) : null
+    };
+  }
+
   calculateTree(center: Persona) {
     // 1. Padres de center (PADRE_HIJO: persona_1 = padre, persona_2 = hijo)
     const parentIds = this.allRelations
@@ -781,7 +890,7 @@ export class TreeContainerComponent implements OnInit, OnChanges {
     });
     this.parents = directParents;
 
-    // 2. Para cada padre, construir su rama de abuelos y bisabuelos
+    // 2. Para cada padre, construir su rama de abuelos y ancestros recursivos
     this.parentBranches = [];
 
     this.parents.forEach(parent => {
@@ -832,63 +941,12 @@ export class TreeContainerComponent implements OnInit, OnChanges {
         }
       }
 
-      // Para cada abuelo, buscar sus bisabuelos (padres del abuelo)
+      // Para cada abuelo, buscar sus ancestros (Bisabuelos, Tatarabuelos, etc.)
       const gpLineages: GrandparentLineage[] = [];
 
       directGps.forEach(gp => {
-        const baIds = this.allRelations
-          .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === gp.id)
-          .map(r => r.persona_1_id);
-        let directBas = this.allPersons.filter(p => baIds.includes(p.id));
-
-        // Si solo hay 1 bisabuelo y tiene pareja, agregar su pareja
-        if (directBas.length === 1) {
-          const singleBa = directBas[0];
-          const partnerRel = this.allRelations.find(
-            r => r.tipo_relacion === 'PAREJA' &&
-              (r.persona_1_id === singleBa.id || r.persona_2_id === singleBa.id)
-          );
-          if (partnerRel) {
-            const partnerId = partnerRel.persona_1_id === singleBa.id
-              ? partnerRel.persona_2_id
-              : partnerRel.persona_1_id;
-            if (!directBas.some(p => p.id === partnerId)) {
-              const partnerPerson = this.allPersons.find(p => p.id === partnerId);
-              if (partnerPerson) {
-                directBas.push(partnerPerson);
-              }
-            }
-          }
-        }
-
-        // Ordenar bisabuelos: M primero, F segundo
-        directBas.sort((a, b) => {
-          if (a.genero === 'M' && b.genero !== 'M') return -1;
-          if (a.genero !== 'M' && b.genero === 'M') return 1;
-          return 0;
-        });
-
-        let bisabuelosGroup: BisabueloGroup | null = null;
-        if (directBas.length > 0) {
-          const b1 = directBas[0];
-          const b2 = directBas.length > 1 ? directBas[1] : null;
-          let bWeddingYear: string | null = null;
-          if (b2) {
-            const bRel = this.allRelations.find(
-              r => r.tipo_relacion === 'PAREJA' &&
-                ((r.persona_1_id === b1.id && r.persona_2_id === b2.id) ||
-                 (r.persona_1_id === b2.id && r.persona_2_id === b1.id))
-            );
-            if (bRel?.fecha_inicio) {
-              try {
-                bWeddingYear = new Date(bRel.fecha_inicio + 'T00:00:00').getFullYear().toString();
-              } catch { bWeddingYear = null; }
-            }
-          }
-          bisabuelosGroup = { p1: b1, p2: b2, weddingYear: bWeddingYear };
-        }
-
-        gpLineages.push({ gp, bisabuelos: bisabuelosGroup });
+        const ancestors = this.buildAncestorGroup(gp);
+        gpLineages.push({ gp, ancestors });
       });
 
       this.parentBranches.push({
@@ -960,22 +1018,47 @@ export class TreeContainerComponent implements OnInit, OnChanges {
       this.kinshipLabels.set(parent.id, g(parent, 'Madre', 'Padre', 'Padre/Madre'));
 
       const lado = parent.genero === 'M' ? 'paterno' : parent.genero === 'F' ? 'materno' : (bIdx === 0 ? 'paterno' : 'materno');
-      const s = ` ${lado}`;
+      const sideStr = ` ${lado}`;
 
       branch.grandparents.forEach(gpLineage => {
         const gp = gpLineage.gp;
-        this.kinshipLabels.set(gp.id, g(gp, `Abuela${s}`, `Abuelo${s}`, `Abuelo/a${s}`));
+        this.kinshipLabels.set(gp.id, g(gp, `Abuela${sideStr}`, `Abuelo${sideStr}`, `Abuelo/a${sideStr}`));
 
-        if (gpLineage.bisabuelos) {
-          const b1 = gpLineage.bisabuelos.p1;
-          this.kinshipLabels.set(b1.id, g(b1, `Bisabuela${s}`, `Bisabuelo${s}`, `Bisabuelo/a${s}`));
-          if (gpLineage.bisabuelos.p2) {
-            const b2 = gpLineage.bisabuelos.p2;
-            this.kinshipLabels.set(b2.id, g(b2, `Bisabuela${s}`, `Bisabuelo${s}`, `Bisabuelo/a${s}`));
-          }
+        if (gpLineage.ancestors) {
+          this.assignAncestorKinship(gpLineage.ancestors, 3, sideStr);
         }
       });
     });
+  }
+
+  /** Asigna etiquetas a ancestros recursivamente (Bisabuelos depth=3, Tatarabuelos depth=4, etc.) */
+  assignAncestorKinship(group: AncestorCoupleGroup, depth: number, sideStr: string) {
+    let labelPrefix = 'Ancestro';
+    if (depth === 2) labelPrefix = 'Abuelo';
+    else if (depth === 3) labelPrefix = 'Bisabuelo';
+    else if (depth === 4) labelPrefix = 'Tatarabuelo';
+    else if (depth === 5) labelPrefix = 'Trastatarabuelo';
+    else if (depth > 5) labelPrefix = `${depth}º Ancestro`;
+
+    const p1Label = group.p1.genero === 'M'
+      ? `${labelPrefix}${sideStr}`
+      : `${labelPrefix.replace(/o$/, 'a')}${sideStr}`;
+    this.kinshipLabels.set(group.p1.id, p1Label);
+
+    if (group.p1Ancestors) {
+      this.assignAncestorKinship(group.p1Ancestors, depth + 1, sideStr);
+    }
+
+    if (group.p2) {
+      const p2Label = group.p2.genero === 'F'
+        ? `${labelPrefix.replace(/o$/, 'a')}${sideStr}`
+        : `${labelPrefix}${sideStr}`;
+      this.kinshipLabels.set(group.p2.id, p2Label);
+
+      if (group.p2Ancestors) {
+        this.assignAncestorKinship(group.p2Ancestors, depth + 1, sideStr);
+      }
+    }
   }
 
   getParentsWeddingYear(): string | null {
