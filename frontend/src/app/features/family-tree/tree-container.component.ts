@@ -120,11 +120,11 @@ export interface ParentBranch {
       </div>
 
       <!-- Template recursivo para ancestros (Bisabuelos, Tatarabuelos, Trastatarabuelos, etc.) -->
-      <ng-template #ancestorCard let-group="group" let-targetName="targetName">
+      <ng-template #ancestorCard let-group="group" let-targetName="targetName" let-label="label">
         <div class="ancestor-origin-card" *ngIf="group">
           
           <div class="ancestor-origin-header">
-            <span class="origin-badge">Padres de {{ targetName }}</span>
+            <span class="origin-badge">{{ label || 'Padres de' }} {{ targetName }}</span>
           </div>
 
           <div class="ancestor-couple-flex">
@@ -227,7 +227,7 @@ export interface ParentBranch {
                         
                         <!-- Cuadro recursivo de Ancestros (Bisabuelos, Tatarabuelos, etc.) -->
                         <ng-container *ngIf="gpItem.ancestors">
-                          <ng-container *ngTemplateOutlet="ancestorCard; context: { group: gpItem.ancestors, targetName: gpItem.gp.nombre }"></ng-container>
+                          <ng-container *ngTemplateOutlet="ancestorCard; context: { group: gpItem.ancestors, targetName: gpItem.gp.nombre, label: 'Abuelos paternos de' }"></ng-container>
                         </ng-container>
 
                         <!-- Nodo del Abuelo / Abuela -->
