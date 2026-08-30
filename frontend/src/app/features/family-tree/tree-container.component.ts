@@ -457,11 +457,22 @@ export interface ParentBranch {
       [isOpen]="isEditPersonDialogOpen"
       [person]="editDialogTargetPerson"
       [parents]="editDialogParents"
+      [partners]="editDialogPartners"
+      [children]="editDialogChildren"
       [siblings]="editDialogSiblings"
+      [allPersons]="allPersons"
+      [allRelations]="allRelations"
       (closed)="isEditPersonDialogOpen = false"
       (saved)="onPersonEdited($event)"
       (deleted)="onPersonDeleted($event)"
-      (navigate)="onPersonNavigate($event)">
+      (navigate)="onPersonNavigate($event)"
+      (unlinkParent)="onUnlinkParent($event)"
+      (unlinkPartner)="onUnlinkPartner($event)"
+      (unlinkChild)="onUnlinkChild($event)"
+      (linkParent)="onLinkParent($event)"
+      (linkPartner)="onLinkPartner($event)"
+      (linkChild)="onLinkChild($event)"
+      (updateWeddingDate)="onUpdateWeddingDate($event)">
     </app-edit-person-dialog>
 
     <app-timeline-dialog
@@ -1143,6 +1154,8 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   isEditPersonDialogOpen = false;
   editDialogTargetPerson: Persona | null = null;
   editDialogParents: Persona[] = [];
+  editDialogPartners: Persona[] = [];
+  editDialogChildren: Persona[] = [];
   editDialogSiblings: Persona[] = [];
 
   ngOnInit() {
@@ -1161,7 +1174,7 @@ export class TreeContainerComponent implements OnInit, OnChanges {
     this.loading = true;
     this.api.getPersonas(this.arbolId || undefined).subscribe(personas => {
       this.allPersons = personas;
-      this.api.getRelaciones().subscribe(relaciones => {
+      this.api.getRelaciones(this.arbolId || undefined).subscribe(relaciones => {
         this.allRelations = relaciones;
 
         if (this.allPersons.length === 0) {
@@ -1329,23 +1342,27 @@ export class TreeContainerComponent implements OnInit, OnChanges {
 
   /** Construye recursivamente el grupo de ancestros para cualquier persona */
   buildAncestorGroup(person: Persona): AncestorCoupleGroup | null {
+    const normalize = (id?: string) => id ? id.replace(/-/g, '').toLowerCase() : '';
+    const childId = normalize(person.id);
+
     const parentIds = this.allRelations
-      .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === person.id)
-      .map(r => r.persona_1_id);
-    let directParents = this.allPersons.filter(p => parentIds.includes(p.id));
+      .filter(r => r.tipo_relacion === 'PADRE_HIJO' && normalize(r.persona_2_id) === childId)
+      .map(r => normalize(r.persona_1_id));
+    let directParents = this.allPersons.filter(p => parentIds.includes(normalize(p.id)));
 
     if (directParents.length === 1) {
       const singleParent = directParents[0];
+      const singleParentId = normalize(singleParent.id);
       const partnerRel = this.allRelations.find(
         r => r.tipo_relacion === 'PAREJA' &&
-          (r.persona_1_id === singleParent.id || r.persona_2_id === singleParent.id)
+          (normalize(r.persona_1_id) === singleParentId || normalize(r.persona_2_id) === singleParentId)
       );
       if (partnerRel) {
-        const partnerId = partnerRel.persona_1_id === singleParent.id
-          ? partnerRel.persona_2_id
-          : partnerRel.persona_1_id;
-        if (!directParents.some(p => p.id === partnerId)) {
-          const partnerPerson = this.allPersons.find(p => p.id === partnerId);
+        const partnerId = normalize(partnerRel.persona_1_id) === singleParentId
+          ? normalize(partnerRel.persona_2_id)
+          : normalize(partnerRel.persona_1_id);
+        if (!directParents.some(p => normalize(p.id) === partnerId)) {
+          const partnerPerson = this.allPersons.find(p => normalize(p.id) === partnerId);
           if (partnerPerson) {
             directParents.push(partnerPerson);
           }
@@ -1368,10 +1385,12 @@ export class TreeContainerComponent implements OnInit, OnChanges {
 
     let weddingYear: string | null = null;
     if (p2) {
+      const p1Id = normalize(p1.id);
+      const p2Id = normalize(p2.id);
       const pairRel = this.allRelations.find(
         r => r.tipo_relacion === 'PAREJA' &&
-          ((r.persona_1_id === p1.id && r.persona_2_id === p2.id) ||
-           (r.persona_1_id === p2.id && r.persona_2_id === p1.id))
+          ((normalize(r.persona_1_id) === p1Id && normalize(r.persona_2_id) === p2Id) ||
+           (normalize(r.persona_1_id) === p2Id && normalize(r.persona_2_id) === p1Id))
       );
       if (pairRel?.fecha_inicio) {
         try {
@@ -1390,25 +1409,29 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   }
 
   calculateTree(center: Persona) {
+    const normalize = (id?: string) => id ? id.replace(/-/g, '').toLowerCase() : '';
+    const centerId = normalize(center.id);
+
     // 1. Padres de center (PADRE_HIJO: persona_1 = padre, persona_2 = hijo)
     const parentIds = this.allRelations
-      .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === center.id)
-      .map(r => r.persona_1_id);
-    let directParents = this.allPersons.filter(p => parentIds.includes(p.id));
+      .filter(r => r.tipo_relacion === 'PADRE_HIJO' && normalize(r.persona_2_id) === centerId)
+      .map(r => normalize(r.persona_1_id));
+    let directParents = this.allPersons.filter(p => parentIds.includes(normalize(p.id)));
 
     // Si solo hay 1 padre, buscar su pareja
     if (directParents.length === 1) {
       const singleParent = directParents[0];
+      const singleParentId = normalize(singleParent.id);
       const partnerRel = this.allRelations.find(
         r => r.tipo_relacion === 'PAREJA' &&
-          (r.persona_1_id === singleParent.id || r.persona_2_id === singleParent.id)
+          (normalize(r.persona_1_id) === singleParentId || normalize(r.persona_2_id) === singleParentId)
       );
       if (partnerRel) {
-        const partnerId = partnerRel.persona_1_id === singleParent.id
-          ? partnerRel.persona_2_id
-          : partnerRel.persona_1_id;
-        if (!directParents.some(p => p.id === partnerId)) {
-          const partnerPerson = this.allPersons.find(p => p.id === partnerId);
+        const partnerId = normalize(partnerRel.persona_1_id) === singleParentId
+          ? normalize(partnerRel.persona_2_id)
+          : normalize(partnerRel.persona_1_id);
+        if (!directParents.some(p => normalize(p.id) === partnerId)) {
+          const partnerPerson = this.allPersons.find(p => normalize(p.id) === partnerId);
           if (partnerPerson) {
             directParents.push(partnerPerson);
           }
@@ -1428,24 +1451,26 @@ export class TreeContainerComponent implements OnInit, OnChanges {
     this.parentBranches = [];
 
     this.parents.forEach(parent => {
+      const parentId = normalize(parent.id);
       const gpIds = this.allRelations
-        .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === parent.id)
-        .map(r => r.persona_1_id);
-      let directGps = this.allPersons.filter(p => gpIds.includes(p.id));
+        .filter(r => r.tipo_relacion === 'PADRE_HIJO' && normalize(r.persona_2_id) === parentId)
+        .map(r => normalize(r.persona_1_id));
+      let directGps = this.allPersons.filter(p => gpIds.includes(normalize(p.id)));
 
       // Si solo hay 1 abuelo y tiene pareja, agregar su pareja
       if (directGps.length === 1) {
         const singleGp = directGps[0];
+        const singleGpId = normalize(singleGp.id);
         const partnerRel = this.allRelations.find(
           r => r.tipo_relacion === 'PAREJA' &&
-            (r.persona_1_id === singleGp.id || r.persona_2_id === singleGp.id)
+            (normalize(r.persona_1_id) === singleGpId || normalize(r.persona_2_id) === singleGpId)
         );
         if (partnerRel) {
-          const partnerId = partnerRel.persona_1_id === singleGp.id
-            ? partnerRel.persona_2_id
-            : partnerRel.persona_1_id;
-          if (!directGps.some(p => p.id === partnerId)) {
-            const partnerPerson = this.allPersons.find(p => p.id === partnerId);
+          const partnerId = normalize(partnerRel.persona_1_id) === singleGpId
+            ? normalize(partnerRel.persona_2_id)
+            : normalize(partnerRel.persona_1_id);
+          if (!directGps.some(p => normalize(p.id) === partnerId)) {
+            const partnerPerson = this.allPersons.find(p => normalize(p.id) === partnerId);
             if (partnerPerson) {
               directGps.push(partnerPerson);
             }
@@ -1462,23 +1487,25 @@ export class TreeContainerComponent implements OnInit, OnChanges {
 
       // Hermanos del padre/madre (Tíos y Tías del nodo central)
       let parentSiblings: Persona[] = [];
-      const allGpIds = directGps.map(g => g.id);
+      const allGpIds = directGps.map(g => normalize(g.id));
       if (allGpIds.length > 0) {
         const uncleIds = Array.from(new Set(
           this.allRelations
-            .filter(r => r.tipo_relacion === 'PADRE_HIJO' && allGpIds.includes(r.persona_1_id) && r.persona_2_id !== parent.id)
-            .map(r => r.persona_2_id)
+            .filter(r => r.tipo_relacion === 'PADRE_HIJO' && allGpIds.includes(normalize(r.persona_1_id)) && normalize(r.persona_2_id) !== parentId)
+            .map(r => normalize(r.persona_2_id))
         ));
-        parentSiblings = this.allPersons.filter(p => uncleIds.includes(p.id));
+        parentSiblings = this.allPersons.filter(p => uncleIds.includes(normalize(p.id)));
       }
 
       // Año de matrimonio entre los abuelos (si hay 2)
       let gpWeddingYear: string | null = null;
       if (directGps.length >= 2) {
+        const gp1Id = normalize(directGps[0].id);
+        const gp2Id = normalize(directGps[1].id);
         const gpRel = this.allRelations.find(
           r => r.tipo_relacion === 'PAREJA' &&
-            ((r.persona_1_id === directGps[0].id && r.persona_2_id === directGps[1].id) ||
-             (r.persona_1_id === directGps[1].id && r.persona_2_id === directGps[0].id))
+            ((normalize(r.persona_1_id) === gp1Id && normalize(r.persona_2_id) === gp2Id) ||
+             (normalize(r.persona_1_id) === gp2Id && normalize(r.persona_2_id) === gp1Id))
         );
         if (gpRel?.fecha_inicio) {
           try {
@@ -1505,34 +1532,34 @@ export class TreeContainerComponent implements OnInit, OnChanges {
 
     // Hermanos del nodo central (otros hijos de los mismos padres)
     if (this.parents.length > 0) {
-      const parentIds = this.parents.map(p => p.id);
+      const parentIds = this.parents.map(p => normalize(p.id));
       const siblingIds = Array.from(new Set(
         this.allRelations
-          .filter(r => r.tipo_relacion === 'PADRE_HIJO' && parentIds.includes(r.persona_1_id) && r.persona_2_id !== center.id)
-          .map(r => r.persona_2_id)
+          .filter(r => r.tipo_relacion === 'PADRE_HIJO' && parentIds.includes(normalize(r.persona_1_id)) && normalize(r.persona_2_id) !== centerId)
+          .map(r => normalize(r.persona_2_id))
       ));
-      this.siblings = this.allPersons.filter(p => siblingIds.includes(p.id));
+      this.siblings = this.allPersons.filter(p => siblingIds.includes(normalize(p.id)));
     } else {
       this.siblings = [];
     }
 
     // Children
     const childIds = this.allRelations
-      .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_1_id === center.id)
-      .map(r => r.persona_2_id);
-    this.children = this.allPersons.filter(p => childIds.includes(p.id));
+      .filter(r => r.tipo_relacion === 'PADRE_HIJO' && normalize(r.persona_1_id) === centerId)
+      .map(r => normalize(r.persona_2_id));
+    this.children = this.allPersons.filter(p => childIds.includes(normalize(p.id)));
 
     // Partners
     const partnerRelations = this.allRelations.filter(
       r => r.tipo_relacion === 'PAREJA' &&
-        (r.persona_1_id === center.id || r.persona_2_id === center.id)
+        (normalize(r.persona_1_id) === centerId || normalize(r.persona_2_id) === centerId)
     );
     this.partnerRelation = partnerRelations[0] ?? null;
 
     const partnerIds = partnerRelations.map(
-      r => r.persona_1_id === center.id ? r.persona_2_id : r.persona_1_id
+      r => normalize(r.persona_1_id) === centerId ? normalize(r.persona_2_id) : normalize(r.persona_1_id)
     );
-    this.partners = this.allPersons.filter(p => partnerIds.includes(p.id));
+    this.partners = this.allPersons.filter(p => partnerIds.includes(normalize(p.id)));
 
     // Compute kinship labels
     this.computeKinship();
@@ -1618,10 +1645,13 @@ export class TreeContainerComponent implements OnInit, OnChanges {
 
   getParentsWeddingYear(): string | null {
     if (this.parents.length < 2) return null;
+    const normalize = (id?: string) => id ? id.replace(/-/g, '').toLowerCase() : '';
+    const p1Id = normalize(this.parents[0].id);
+    const p2Id = normalize(this.parents[1].id);
     const rel = this.allRelations.find(
       r => r.tipo_relacion === 'PAREJA' &&
-        ((r.persona_1_id === this.parents[0].id && r.persona_2_id === this.parents[1].id) ||
-         (r.persona_1_id === this.parents[1].id && r.persona_2_id === this.parents[0].id))
+        ((normalize(r.persona_1_id) === p1Id && normalize(r.persona_2_id) === p2Id) ||
+         (normalize(r.persona_1_id) === p2Id && normalize(r.persona_2_id) === p1Id))
     );
     if (!rel?.fecha_inicio) return null;
     try {
@@ -1630,9 +1660,18 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   }
 
   getWeddingYear(): string | null {
-    if (!this.partnerRelation?.fecha_inicio) return null;
+    if (!this.rootPerson || this.partners.length === 0) return null;
+    const normalize = (id?: string) => id ? id.replace(/-/g, '').toLowerCase() : '';
+    const rootId = normalize(this.rootPerson.id);
+    const partnerId = normalize(this.partners[0].id);
+    const rel = this.allRelations.find(
+      r => r.tipo_relacion === 'PAREJA' &&
+        ((normalize(r.persona_1_id) === rootId && normalize(r.persona_2_id) === partnerId) ||
+         (normalize(r.persona_1_id) === partnerId && normalize(r.persona_2_id) === rootId))
+    );
+    if (!rel?.fecha_inicio) return null;
     try {
-      return new Date(this.partnerRelation.fecha_inicio + 'T00:00:00').getFullYear().toString();
+      return new Date(rel.fecha_inicio + 'T00:00:00').getFullYear().toString();
     } catch { return null; }
   }
 
@@ -1649,15 +1688,24 @@ export class TreeContainerComponent implements OnInit, OnChanges {
     setTimeout(() => this.toastVisible = false, 2500);
   }
 
-  onPersonNodeClick(person: Persona) {
-    this.editDialogTargetPerson = person;
-    this.editDialogParents = [];
-    this.editDialogSiblings = [];
-
+  populateEditDialogRelatives(person: Persona) {
     // Buscar IDs de padres desde las relaciones ya cargadas
     const parentIds = this.allRelations
       .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_2_id === person.id)
       .map(r => r.persona_1_id);
+    this.editDialogParents = this.allPersons.filter(p => parentIds.includes(p.id));
+
+    // Parejas
+    const partnerIds = this.allRelations
+      .filter(r => r.tipo_relacion === 'PAREJA' && (r.persona_1_id === person.id || r.persona_2_id === person.id))
+      .map(r => r.persona_1_id === person.id ? r.persona_2_id : r.persona_1_id);
+    this.editDialogPartners = this.allPersons.filter(p => partnerIds.includes(p.id));
+
+    // Hijos
+    const childIds = this.allRelations
+      .filter(r => r.tipo_relacion === 'PADRE_HIJO' && r.persona_1_id === person.id)
+      .map(r => r.persona_2_id);
+    this.editDialogChildren = this.allPersons.filter(p => childIds.includes(p.id));
 
     // Buscar IDs de hermanos (hijos de los mismos padres, excluyendo a la persona actual)
     let siblingIds: string[] = [];
@@ -1668,28 +1716,13 @@ export class TreeContainerComponent implements OnInit, OnChanges {
           .map(r => r.persona_2_id)
       ));
     }
+    this.editDialogSiblings = this.allPersons.filter(p => siblingIds.includes(p.id));
+  }
 
-    if (parentIds.length === 0 && siblingIds.length === 0) {
-      this.isEditPersonDialogOpen = true;
-      return;
-    }
-
-    // Buscar en allPersons primero; si alguno falta, traer del backend
-    const neededIds = [...parentIds, ...siblingIds];
-    const foundAll = neededIds.every(id => this.allPersons.some(p => p.id === id));
-
-    if (foundAll) {
-      this.editDialogParents = this.allPersons.filter(p => parentIds.includes(p.id));
-      this.editDialogSiblings = this.allPersons.filter(p => siblingIds.includes(p.id));
-      this.isEditPersonDialogOpen = true;
-    } else {
-      this.api.getPersonas().subscribe(todas => {
-        this.allPersons = todas;
-        this.editDialogParents = todas.filter(p => parentIds.includes(p.id));
-        this.editDialogSiblings = todas.filter(p => siblingIds.includes(p.id));
-        this.isEditPersonDialogOpen = true;
-      });
-    }
+  onPersonNodeClick(person: Persona) {
+    this.editDialogTargetPerson = person;
+    this.populateEditDialogRelatives(person);
+    this.isEditPersonDialogOpen = true;
   }
 
   openAddFirstPerson() {
@@ -1946,9 +1979,184 @@ export class TreeContainerComponent implements OnInit, OnChanges {
       if (!payload.genero) delete payload.genero;
       if (!payload.lugar_nacimiento) delete payload.lugar_nacimiento;
 
-      this.api.updatePersona(this.editDialogTargetPerson.id, payload).subscribe(() => {
+      this.api.updatePersona(this.editDialogTargetPerson.id, payload).subscribe(updated => {
+        this.showToast('✓ Datos del cuadro actualizados exitosamente');
         this.isEditPersonDialogOpen = false;
+        if (this.rootPerson?.id === updated.id) {
+          this.rootPerson = updated;
+        }
         this.loadData();
+      });
+    }
+  }
+
+  onUnlinkParent(event: { person: Persona, parent: Persona }) {
+    const rel = this.allRelations.find(r => 
+      r.tipo_relacion === 'PADRE_HIJO' && r.persona_1_id === event.parent.id && r.persona_2_id === event.person.id
+    );
+    if (rel) {
+      this.api.deleteRelacion(rel.id).subscribe(() => {
+        this.showToast(`✓ Relación con ${event.parent.nombre} eliminada`);
+        this.allRelations = this.allRelations.filter(r => r.id !== rel.id);
+        this.populateEditDialogRelatives(event.person);
+        this.loadData();
+      });
+    } else {
+      this.api.deleteRelacionBetween(event.parent.id, event.person.id).subscribe(() => {
+        this.showToast(`✓ Vínculo con ${event.parent.nombre} eliminado`);
+        this.loadData();
+      });
+    }
+  }
+
+  onUnlinkPartner(event: { person: Persona, partner: Persona }) {
+    this.api.deleteRelacionBetween(event.person.id, event.partner.id).subscribe(() => {
+      this.showToast(`✓ Relación de pareja con ${event.partner.nombre} eliminada`);
+      this.allRelations = this.allRelations.filter(r => 
+        !(r.tipo_relacion === 'PAREJA' && 
+          ((r.persona_1_id === event.person.id && r.persona_2_id === event.partner.id) ||
+           (r.persona_1_id === event.partner.id && r.persona_2_id === event.person.id)))
+      );
+      this.populateEditDialogRelatives(event.person);
+      this.loadData();
+    });
+  }
+
+  onUnlinkChild(event: { person: Persona, child: Persona }) {
+    const rel = this.allRelations.find(r => 
+      r.tipo_relacion === 'PADRE_HIJO' && r.persona_1_id === event.person.id && r.persona_2_id === event.child.id
+    );
+    if (rel) {
+      this.api.deleteRelacion(rel.id).subscribe(() => {
+        this.showToast(`✓ Vínculo filial con ${event.child.nombre} eliminado`);
+        this.allRelations = this.allRelations.filter(r => r.id !== rel.id);
+        this.populateEditDialogRelatives(event.person);
+        this.loadData();
+      });
+    } else {
+      this.api.deleteRelacionBetween(event.person.id, event.child.id).subscribe(() => {
+        this.showToast(`✓ Vínculo filial con ${event.child.nombre} eliminado`);
+        this.loadData();
+      });
+    }
+  }
+
+  onLinkParent(event: { person: Persona, parentId: string }) {
+    this.api.createRelacion({
+      arbol_id: this.arbolId || undefined,
+      persona_1_id: event.parentId,
+      persona_2_id: event.person.id,
+      tipo_relacion: 'PADRE_HIJO'
+    }).subscribe(newRel => {
+      this.showToast('✓ Padre/Madre vinculado exitosamente');
+      this.allRelations.push(newRel);
+      this.populateEditDialogRelatives(event.person);
+      this.loadData();
+    });
+  }
+
+  onLinkPartner(event: { person: Persona, partnerId: string, weddingDate?: string }) {
+    this.api.createRelacion({
+      arbol_id: this.arbolId || undefined,
+      persona_1_id: event.person.id,
+      persona_2_id: event.partnerId,
+      tipo_relacion: 'PAREJA',
+      fecha_inicio: event.weddingDate || undefined
+    }).subscribe(newRel => {
+      this.showToast('✓ Pareja vinculada exitosamente');
+      this.allRelations.push(newRel);
+      this.populateEditDialogRelatives(event.person);
+      this.loadData();
+    });
+  }
+
+  onLinkChild(event: { person: Persona, childId: string }) {
+    this.api.createRelacion({
+      arbol_id: this.arbolId || undefined,
+      persona_1_id: event.person.id,
+      persona_2_id: event.childId,
+      tipo_relacion: 'PADRE_HIJO'
+    }).subscribe(newRel => {
+      this.showToast('✓ Hijo/a vinculado exitosamente');
+      this.allRelations.push(newRel);
+      this.populateEditDialogRelatives(event.person);
+      this.loadData();
+    });
+  }
+
+  onUpdateWeddingDate(event: { person: Persona, partner: Persona, weddingDate: string }) {
+    const normalize = (id?: string) => id ? id.replace(/-/g, '').toLowerCase() : '';
+    const p1Norm = normalize(event.person.id);
+    const p2Norm = normalize(event.partner.id);
+
+    const rel = this.allRelations.find(r => 
+      r.tipo_relacion === 'PAREJA' && 
+      ((normalize(r.persona_1_id) === p1Norm && normalize(r.persona_2_id) === p2Norm) ||
+       (normalize(r.persona_1_id) === p2Norm && normalize(r.persona_2_id) === p1Norm))
+    );
+
+    const datePayload = event.weddingDate ? event.weddingDate : undefined;
+
+    const recreateRelation = () => {
+      this.api.deleteRelacionBetween(event.person.id, event.partner.id).subscribe({
+        next: () => {
+          this.api.createRelacion({
+            arbol_id: this.arbolId || undefined,
+            persona_1_id: event.person.id,
+            persona_2_id: event.partner.id,
+            tipo_relacion: 'PAREJA',
+            fecha_inicio: datePayload
+          }).subscribe(() => {
+            this.showToast('✓ Fecha de matrimonio guardada exitosamente');
+            this.loadData();
+          });
+        },
+        error: () => {
+          this.api.createRelacion({
+            arbol_id: this.arbolId || undefined,
+            persona_1_id: event.person.id,
+            persona_2_id: event.partner.id,
+            tipo_relacion: 'PAREJA',
+            fecha_inicio: datePayload
+          }).subscribe(() => {
+            this.showToast('✓ Fecha de matrimonio guardada exitosamente');
+            this.loadData();
+          });
+        }
+      });
+    };
+
+    if (rel) {
+      this.api.updateRelacion(rel.id, { fecha_inicio: datePayload }).subscribe({
+        next: () => {
+          this.showToast('✓ Fecha de matrimonio guardada exitosamente');
+          rel.fecha_inicio = datePayload;
+          if (this.rootPerson) this.calculateTree(this.rootPerson);
+          this.loadData();
+        },
+        error: () => {
+          this.api.updateRelacionBetween(event.person.id, event.partner.id, { fecha_inicio: datePayload }).subscribe({
+            next: () => {
+              this.showToast('✓ Fecha de matrimonio guardada exitosamente');
+              rel.fecha_inicio = datePayload;
+              if (this.rootPerson) this.calculateTree(this.rootPerson);
+              this.loadData();
+            },
+            error: () => {
+              recreateRelation();
+            }
+          });
+        }
+      });
+    } else {
+      this.api.updateRelacionBetween(event.person.id, event.partner.id, { fecha_inicio: datePayload }).subscribe({
+        next: () => {
+          this.showToast('✓ Fecha de matrimonio guardada exitosamente');
+          this.loadData();
+        },
+        error: () => {
+          recreateRelation();
+        }
       });
     }
   }

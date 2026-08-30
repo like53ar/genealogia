@@ -60,9 +60,15 @@ class RelacionDirectaBase(BaseModel):
     tipo_relacion: TipoRelacion
     fecha_inicio: Optional[date] = None
     fecha_fin: Optional[date] = None
+    arbol_id: Optional[UUID] = None
 
 class RelacionDirectaCreate(RelacionDirectaBase):
     pass
+
+class RelacionDirectaUpdate(BaseModel):
+    fecha_inicio: Optional[date] = None
+    fecha_fin: Optional[date] = None
+    tipo_relacion: Optional[TipoRelacion] = None
 
 class RelacionDirecta(RelacionDirectaBase):
     id: UUID

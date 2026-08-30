@@ -42,6 +42,7 @@ export interface PersonaCreate {
 
 export interface Relacion {
   id: string;
+  arbol_id?: string;
   persona_1_id: string;
   persona_2_id: string;
   tipo_relacion: 'PADRE_HIJO' | 'PAREJA' | 'ADOPCION';
@@ -50,6 +51,7 @@ export interface Relacion {
 }
 
 export interface RelacionCreate {
+  arbol_id?: string;
   persona_1_id: string;
   persona_2_id: string;
   tipo_relacion: 'PADRE_HIJO' | 'PAREJA' | 'ADOPCION';
@@ -106,12 +108,31 @@ export class ApiService {
   }
 
   // ── Relaciones ────────────────────────────────────────
-  getRelaciones(): Observable<Relacion[]> {
-    return this.http.get<Relacion[]>(`${this.apiUrl}/relaciones/`);
+  getRelaciones(arbolId?: string): Observable<Relacion[]> {
+    const url = arbolId
+      ? `${this.apiUrl}/relaciones/?arbol_id=${arbolId}&limit=2000`
+      : `${this.apiUrl}/relaciones/?limit=2000`;
+    return this.http.get<Relacion[]>(url);
   }
 
   createRelacion(relacion: RelacionCreate): Observable<Relacion> {
     return this.http.post<Relacion>(`${this.apiUrl}/relaciones/`, relacion);
+  }
+
+  updateRelacion(id: string, data: Partial<RelacionCreate>): Observable<Relacion> {
+    return this.http.put<Relacion>(`${this.apiUrl}/relaciones/${id}`, data);
+  }
+
+  updateRelacionBetween(persona1Id: string, persona2Id: string, data: Partial<RelacionCreate>): Observable<Relacion> {
+    return this.http.put<Relacion>(`${this.apiUrl}/relaciones/entre/${persona1Id}/${persona2Id}`, data);
+  }
+
+  deleteRelacion(id: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/relaciones/${id}`);
+  }
+
+  deleteRelacionBetween(persona1Id: string, persona2Id: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/relaciones/entre/${persona1Id}/${persona2Id}`);
   }
 
   // ── Parentesco ────────────────────────────────────────

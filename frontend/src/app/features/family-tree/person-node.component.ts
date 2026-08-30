@@ -16,9 +16,20 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner' | 's
         class="node-card relative flex flex-col items-center cursor-pointer transition-all duration-300"
         [class]="getCardClass()"
         (click)="nodeClick.emit(person)"
+        title="Clic para editar datos y relaciones"
       >
         <!-- Top accent bar (only for root) -->
         <div *ngIf="role === 'root'" class="top-accent"></div>
+
+        <!-- Quick edit hint on hover -->
+        <button
+          type="button"
+          class="card-edit-btn"
+          (click)="nodeClick.emit(person); $event.stopPropagation()"
+          title="Editar este cuadro y sus relaciones"
+        >
+          ✏️
+        </button>
 
         <!-- Avatar circle -->
         <div class="avatar-circle" [class]="getAvatarClass()">
@@ -48,6 +59,14 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner' | 's
 
       <!-- Action buttons below card — for ALL nodes in ALL generations -->
       <div class="action-buttons">
+
+        <!-- Button ✏️ Editar Cuadro y Relaciones -->
+        <button
+          (click)="nodeClick.emit(person); $event.stopPropagation()"
+          class="action-btn action-btn-edit"
+          title="Editar datos del cuadro y relaciones">
+          ✏️ Editar
+        </button>
 
         <!-- Button +Padre/Madre -->
         <button
@@ -112,6 +131,33 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner' | 's
     .node-card:hover {
       transform: translateY(-2px);
       box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    }
+
+    .card-edit-btn {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(255,255,255,0.85);
+      border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 999px;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: all 0.2s ease;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .node-card:hover .card-edit-btn {
+      opacity: 1;
+      background: #FFFBEB;
+      border-color: #F59E0B;
+      transform: scale(1.1);
     }
 
     /* Root node: larger and with double border effect */
@@ -291,6 +337,18 @@ export type NodeRole = 'root' | 'parent' | 'ancestor' | 'child' | 'partner' | 's
       background: #F8FAFC;
       border-color: #8FA491;
       color: #4A7A50;
+    }
+
+    .action-btn-edit {
+      border-color: #E2B880;
+      color: #9C5B1C;
+      font-weight: 600;
+      background: #FFFDF9;
+    }
+    .action-btn-edit:hover {
+      background: #FEF3C7;
+      border-color: #D97706;
+      color: #78350F;
     }
 
     .action-btn-padre {

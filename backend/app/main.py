@@ -224,6 +224,7 @@ def update_persona(persona_id: UUID, persona: PersonaSimpleCreate, db: Session =
 
     return PersonaSimple(
         id=db_persona.id,
+        arbol_id=db_persona.arbol_id,
         nombre=db_persona.nombre,
         apellido=db_persona.apellido,
         genero=db_persona.genero,
@@ -270,16 +271,114 @@ def read_lugares(skip: int = 0, limit: int = 100, db: Session = Depends(database
 
 @app.post("/relaciones/", response_model=schemas.RelacionDirecta)
 def create_relacion(relacion: schemas.RelacionDirectaCreate, db: Session = Depends(database.get_db)):
-    db_relacion = models.RelacionDirecta(**relacion.model_dump())
+    # Si no se pasó arbol_id explícito, intentar inferirlo de una de las personas
+    rel_data = relacion.model_dump()
+    if not rel_data.get("arbol_id"):
+        p1 = db.query(models.Persona).filter(models.Persona.id == relacion.persona_1_id).first()
+        if p1 and p1.arbol_id:
+            rel_data["arbol_id"] = p1.arbol_id
+
+    # Evitar duplicar la misma relación exacta (o invertida en caso de pareja)
+    existente = db.query(models.RelacionDirecta).filter(
+        ((models.RelacionDirecta.persona_1_id == relacion.persona_1_id) & (models.RelacionDirecta.persona_2_id == relacion.persona_2_id) & (models.RelacionDirecta.tipo_relacion == relacion.tipo_relacion)) |
+        ((models.RelacionDirecta.tipo_relacion == 'PAREJA') & (relacion.tipo_relacion == models.TipoRelacion.PAREJA) & (models.RelacionDirecta.persona_1_id == relacion.persona_2_id) & (models.RelacionDirecta.persona_2_id == relacion.persona_1_id))
+    ).first()
+    if existente:
+        if relacion.fecha_inicio is not None:
+            existente.fecha_inicio = relacion.fecha_inicio
+            db.commit()
+            db.refresh(existente)
+        return existente
+
+    db_relacion = models.RelacionDirecta(**rel_data)
     db.add(db_relacion)
     db.commit()
     db.refresh(db_relacion)
     return db_relacion
 
 @app.get("/relaciones/", response_model=List[schemas.RelacionDirecta])
-def read_relaciones(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
-    relaciones = db.query(models.RelacionDirecta).offset(skip).limit(limit).all()
+def read_relaciones(
+    skip: int = 0,
+    limit: int = 2000,
+    arbol_id: Optional[UUID] = Query(None, description="Filtrar relaciones por árbol"),
+    persona_id: Optional[UUID] = Query(None, description="Filtrar por persona involucrada"),
+    db: Session = Depends(database.get_db)
+):
+    query = db.query(models.RelacionDirecta)
+    if arbol_id:
+        p_ids = [p[0] for p in db.query(models.Persona.id).filter(models.Persona.arbol_id == arbol_id).all()]
+        query = query.filter(
+            (models.RelacionDirecta.arbol_id == arbol_id) |
+            (models.RelacionDirecta.persona_1_id.in_(p_ids)) |
+            (models.RelacionDirecta.persona_2_id.in_(p_ids)) |
+            (models.RelacionDirecta.arbol_id == None)
+        )
+    if persona_id:
+        query = query.filter(
+            (models.RelacionDirecta.persona_1_id == persona_id) | 
+            (models.RelacionDirecta.persona_2_id == persona_id)
+        )
+    relaciones = query.offset(skip).limit(limit).all()
     return relaciones
+
+@app.put("/relaciones/{relacion_id}", response_model=schemas.RelacionDirecta)
+def update_relacion(relacion_id: UUID, relacion_update: schemas.RelacionDirectaUpdate, db: Session = Depends(database.get_db)):
+    """Actualiza los datos de una relación directa (fechas, tipo)."""
+    db_relacion = db.query(models.RelacionDirecta).filter(models.RelacionDirecta.id == relacion_id).first()
+    if not db_relacion:
+        raise HTTPException(status_code=404, detail="Relación no encontrada")
+    
+    update_data = relacion_update.model_dump(exclude_unset=True)
+    if "fecha_inicio" in update_data:
+        db_relacion.fecha_inicio = update_data["fecha_inicio"]
+    if "fecha_fin" in update_data:
+        db_relacion.fecha_fin = update_data["fecha_fin"]
+    if "tipo_relacion" in update_data and update_data["tipo_relacion"]:
+        db_relacion.tipo_relacion = update_data["tipo_relacion"]
+
+    db.commit()
+    db.refresh(db_relacion)
+    return db_relacion
+
+@app.put("/relaciones/entre/{persona_1_id}/{persona_2_id}", response_model=schemas.RelacionDirecta)
+def update_relacion_entre(persona_1_id: UUID, persona_2_id: UUID, relacion_update: schemas.RelacionDirectaUpdate, db: Session = Depends(database.get_db)):
+    """Actualiza la relación existente entre dos personas."""
+    db_relacion = db.query(models.RelacionDirecta).filter(
+        ((models.RelacionDirecta.persona_1_id == persona_1_id) & (models.RelacionDirecta.persona_2_id == persona_2_id)) |
+        ((models.RelacionDirecta.persona_1_id == persona_2_id) & (models.RelacionDirecta.persona_2_id == persona_1_id))
+    ).first()
+    if not db_relacion:
+        raise HTTPException(status_code=404, detail="Relación no encontrada")
+    update_data = relacion_update.model_dump(exclude_unset=True)
+    if "fecha_inicio" in update_data:
+        db_relacion.fecha_inicio = update_data["fecha_inicio"]
+    if "fecha_fin" in update_data:
+        db_relacion.fecha_fin = update_data["fecha_fin"]
+    if "tipo_relacion" in update_data and update_data["tipo_relacion"]:
+        db_relacion.tipo_relacion = update_data["tipo_relacion"]
+    db.commit()
+    db.refresh(db_relacion)
+    return db_relacion
+
+@app.delete("/relaciones/{relacion_id}")
+def delete_relacion(relacion_id: UUID, db: Session = Depends(database.get_db)):
+    """Elimina una relación directa por su ID."""
+    db_relacion = db.query(models.RelacionDirecta).filter(models.RelacionDirecta.id == relacion_id).first()
+    if not db_relacion:
+        raise HTTPException(status_code=404, detail="Relación no encontrada")
+    db.delete(db_relacion)
+    db.commit()
+    return {"message": "Relación eliminada exitosamente"}
+
+@app.delete("/relaciones/entre/{persona_1_id}/{persona_2_id}")
+def delete_relacion_entre(persona_1_id: UUID, persona_2_id: UUID, db: Session = Depends(database.get_db)):
+    """Elimina cualquier relación directa directa o inversa entre dos personas."""
+    eliminadas = db.query(models.RelacionDirecta).filter(
+        ((models.RelacionDirecta.persona_1_id == persona_1_id) & (models.RelacionDirecta.persona_2_id == persona_2_id)) |
+        ((models.RelacionDirecta.persona_1_id == persona_2_id) & (models.RelacionDirecta.persona_2_id == persona_1_id))
+    ).delete(synchronize_session=False)
+    db.commit()
+    return {"message": f"{eliminadas} relación(es) eliminada(s)"}
 
 
 # ── Extra endpoints ──────────────────────────────────────
