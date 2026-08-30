@@ -2097,6 +2097,17 @@ export class TreeContainerComponent implements OnInit, OnChanges {
 
     const datePayload = event.weddingDate ? event.weddingDate : undefined;
 
+    const applyMemoryUpdate = () => {
+      this.allRelations.forEach(r => {
+        if (r.tipo_relacion === 'PAREJA' &&
+            ((normalize(r.persona_1_id) === p1Norm && normalize(r.persona_2_id) === p2Norm) ||
+             (normalize(r.persona_1_id) === p2Norm && normalize(r.persona_2_id) === p1Norm))) {
+          r.fecha_inicio = datePayload;
+        }
+      });
+      if (this.rootPerson) this.calculateTree(this.rootPerson);
+    };
+
     const recreateRelation = () => {
       this.api.deleteRelacionBetween(event.person.id, event.partner.id).subscribe({
         next: () => {
@@ -2106,8 +2117,9 @@ export class TreeContainerComponent implements OnInit, OnChanges {
             persona_2_id: event.partner.id,
             tipo_relacion: 'PAREJA',
             fecha_inicio: datePayload
-          }).subscribe(() => {
+          }).subscribe((newRel) => {
             this.showToast('✓ Fecha de matrimonio guardada exitosamente');
+            applyMemoryUpdate();
             this.loadData();
           });
         },
@@ -2120,6 +2132,7 @@ export class TreeContainerComponent implements OnInit, OnChanges {
             fecha_inicio: datePayload
           }).subscribe(() => {
             this.showToast('✓ Fecha de matrimonio guardada exitosamente');
+            applyMemoryUpdate();
             this.loadData();
           });
         }
@@ -2130,16 +2143,14 @@ export class TreeContainerComponent implements OnInit, OnChanges {
       this.api.updateRelacion(rel.id, { fecha_inicio: datePayload }).subscribe({
         next: () => {
           this.showToast('✓ Fecha de matrimonio guardada exitosamente');
-          rel.fecha_inicio = datePayload;
-          if (this.rootPerson) this.calculateTree(this.rootPerson);
+          applyMemoryUpdate();
           this.loadData();
         },
         error: () => {
           this.api.updateRelacionBetween(event.person.id, event.partner.id, { fecha_inicio: datePayload }).subscribe({
             next: () => {
               this.showToast('✓ Fecha de matrimonio guardada exitosamente');
-              rel.fecha_inicio = datePayload;
-              if (this.rootPerson) this.calculateTree(this.rootPerson);
+              applyMemoryUpdate();
               this.loadData();
             },
             error: () => {
@@ -2152,6 +2163,7 @@ export class TreeContainerComponent implements OnInit, OnChanges {
       this.api.updateRelacionBetween(event.person.id, event.partner.id, { fecha_inicio: datePayload }).subscribe({
         next: () => {
           this.showToast('✓ Fecha de matrimonio guardada exitosamente');
+          applyMemoryUpdate();
           this.loadData();
         },
         error: () => {
