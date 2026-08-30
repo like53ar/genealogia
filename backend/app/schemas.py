@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from uuid import UUID
 from datetime import date
@@ -43,6 +43,13 @@ class PersonaBase(BaseModel):
     lugar_fallecimiento_id: Optional[UUID] = None
     biografia: Optional[str] = None
 
+    @field_validator('fecha_nacimiento', 'fecha_fallecimiento', mode='before')
+    @classmethod
+    def clean_empty_dates(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
 class PersonaCreate(PersonaBase):
     pass
 
@@ -62,6 +69,13 @@ class RelacionDirectaBase(BaseModel):
     fecha_fin: Optional[date] = None
     arbol_id: Optional[UUID] = None
 
+    @field_validator('fecha_inicio', 'fecha_fin', mode='before')
+    @classmethod
+    def clean_empty_dates(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
+
 class RelacionDirectaCreate(RelacionDirectaBase):
     pass
 
@@ -69,6 +83,13 @@ class RelacionDirectaUpdate(BaseModel):
     fecha_inicio: Optional[date] = None
     fecha_fin: Optional[date] = None
     tipo_relacion: Optional[TipoRelacion] = None
+
+    @field_validator('fecha_inicio', 'fecha_fin', mode='before')
+    @classmethod
+    def clean_empty_dates(cls, v):
+        if v == '' or v is None:
+            return None
+        return v
 
 class RelacionDirecta(RelacionDirectaBase):
     id: UUID
