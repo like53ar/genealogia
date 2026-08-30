@@ -801,12 +801,8 @@ export interface ParentBranch {
       display: flex;
       flex-direction: column;
       align-items: center;
-      background: rgba(28, 19, 12, 0.65);
-      border: 1.5px dashed rgba(212, 175, 120, 0.6);
-      border-radius: 14px;
       padding: 6px 8px 0 8px;
       margin-bottom: 0;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
     }
 
     .ancestor-origin-header {
@@ -819,10 +815,11 @@ export interface ParentBranch {
       letter-spacing: 0.06em;
       text-transform: uppercase;
       color: #F8ECD5;
-      background: rgba(212, 175, 120, 0.25);
+      background: rgba(28, 19, 12, 0.85);
       border: 1px solid rgba(212, 175, 120, 0.6);
       border-radius: 999px;
-      padding: 1px 6px;
+      padding: 2px 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
     }
 
     .ancestor-couple-flex {
