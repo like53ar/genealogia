@@ -124,7 +124,7 @@ export interface ParentBranch {
         <div class="ancestor-origin-card" *ngIf="group">
           
           <div class="ancestor-origin-header">
-            <span class="origin-badge">{{ label || 'Padres de' }} {{ targetName }}</span>
+            <span class="origin-badge">{{ getCustomLabel(label, targetName) }}</span>
           </div>
 
           <div class="ancestor-couple-flex">
@@ -1335,6 +1335,18 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   printTree() {
     this.isExportMenuOpen = false;
     window.print();
+  }
+
+  getCustomLabel(label: string | undefined, targetName: string): string {
+    const cleanLabel = (label || 'Padres de').trim();
+    const cleanName = (targetName || '').trim();
+    if (cleanLabel === 'Padres de' && cleanName === 'NOMBRE') {
+      return 'Abuelo de NOMBRE';
+    }
+    if (cleanLabel === 'Abuelos paternos de' && cleanName === 'NOMBRE') {
+      return 'Bisabuelos de NOMBRE';
+    }
+    return `${label || 'Padres de'} ${targetName}`;
   }
 
   /** Construye recursivamente el grupo de ancestros para cualquier persona */
