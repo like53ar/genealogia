@@ -1155,8 +1155,19 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   editDialogChildren: Persona[] = [];
   editDialogSiblings: Persona[] = [];
 
+  /** Títulos personalizados de cuadros, leídos de un archivo local no versionado */
+  labelOverrides: { label: string; name: string; text: string }[] = [];
+
   ngOnInit() {
     this.loadData();
+    this.loadLabelOverrides();
+  }
+
+  private loadLabelOverrides() {
+    fetch('etiquetas-personalizadas.json')
+      .then(res => (res.ok ? res.json() : []))
+      .then(data => { this.labelOverrides = Array.isArray(data) ? data : []; })
+      .catch(() => { this.labelOverrides = []; });
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -1340,11 +1351,9 @@ export class TreeContainerComponent implements OnInit, OnChanges {
   getCustomLabel(label: string | undefined, targetName: string): string {
     const cleanLabel = (label || 'Padres de').trim();
     const cleanName = (targetName || '').trim();
-    if (cleanLabel === 'Padres de' && cleanName === 'NOMBRE') {
-      return 'Abuelo de NOMBRE';
-    }
-    if (cleanLabel === 'Abuelos paternos de' && cleanName === 'NOMBRE') {
-      return 'Bisabuelos de NOMBRE';
+    const override = this.labelOverrides.find(o => o.label === cleanLabel && o.name === cleanName);
+    if (override) {
+      return override.text;
     }
     return `${label || 'Padres de'} ${targetName}`;
   }

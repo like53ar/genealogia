@@ -22,6 +22,8 @@ env/
 *.xlsx
 *.csv
 generar_excel.py
+frontend/public/etiquetas-personalizadas.json
+backend/backups/
 
 # dotenv
 .env
