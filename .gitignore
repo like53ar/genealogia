@@ -18,7 +18,10 @@ env/
 *.db
 *.sqlite
 *.sqlite3
-!backend/genealogy.db
+# Datos familiares (nombres de personas): nunca se suben
+*.xlsx
+*.csv
+generar_excel.py
 
 # dotenv
 .env

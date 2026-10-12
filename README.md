@@ -82,7 +82,7 @@ genealogia/
 
 ## 🌐 API REST
 
-Base URL: `http://localhost:8000`
+Base URL: `http://localhost:8001`
 
 ### Árboles
 | Método | Endpoint | Descripción |
@@ -113,7 +113,7 @@ Base URL: `http://localhost:8000`
 | `GET` | `/geocodificar/?direccion=...` | Devuelve coordenadas de un lugar |
 | `GET` | `/parentesco/?persona_a_id=...&persona_b_id=...` | Calcula el parentesco entre dos personas |
 
-> La documentación interactiva completa está disponible en: `http://localhost:8000/docs`
+> La documentación interactiva completa está disponible en: `http://localhost:8001/docs`
 
 ---
 
@@ -149,7 +149,7 @@ pip install -r requirements.txt
 python -m uvicorn app.main:app --reload
 ```
 
-El backend queda disponible en `http://localhost:8000`.
+El backend queda disponible en `http://localhost:8001`.
 
 > **Base de datos:** Por defecto usa **SQLite** (`genealogy.db`) sin configuración adicional.  
 > Para usar PostgreSQL, definir la variable de entorno `DATABASE_URL` en un archivo `.env`.

@@ -1,8 +1,8 @@
 # Script para iniciar backend y frontend en segundo plano y abrir el navegador
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
-# 1. Iniciar Backend (FastAPI + Uvicorn) en puerto 8000
-$backendConn = Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue
+# 1. Iniciar Backend (FastAPI + Uvicorn) en puerto 8001
+$backendConn = Get-NetTCPConnection -LocalPort 8001 -ErrorAction SilentlyContinue
 if (-not $backendConn) {
     $backendBat = Join-Path $ScriptDir "iniciar_backend.bat"
     Start-Process -FilePath $backendBat -WindowStyle Hidden

@@ -64,7 +64,7 @@ export interface RelacionCreate {
 })
 export class ApiService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8000';
+  private apiUrl = 'http://localhost:8001';
 
   // ── Árboles ──────────────────────────────────────────
   getArboles(): Observable<Arbol[]> {
